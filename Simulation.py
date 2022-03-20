@@ -2,18 +2,20 @@ import numpy as np
 
 class Simulation():
     
-    def __init__(self, normal_Direction, plane_D, acoustic_Ray, acoustic_Loction, SPL, acoustic_Alpha, acoustic_Scatter):
+    def __init__(self, normal_Direction, plane_D, acoustic_Ray, acoustic_Loction, acoustic_Alpha, acoustic_Scatter):
         self.normal_Direction = normal_Direction
         self.plane_D = plane_D
         self.acoustic_Ray = acoustic_Ray
         self.acoustic_Loction = acoustic_Loction
-        self.SPL = SPL
         self.acoustic_Alpha = acoustic_Alpha
         self.acoustic_Scatter = acoustic_Scatter
         
     def spl2Preasure(self):
-        return 10**(self.SPL/20)/(20*10^(-6))
+        return 10**(self.SPL/20)/(20*(10**(-6)))
     
+    def preasure2SPL(self, presure_Array):
+        spl = np.log10(presure_Array/20e-6)*20
+        return spl
     
     def randomGenerateOrthognal(self, normal_Vector):
         
@@ -104,7 +106,7 @@ class Simulation():
         
         for i in range(acoustic_Dirc.shape[0]):
             
-            infinite_intersection,coef = self.vectorInfinitePlaneIntersection(plane_Dirc,acoustic_Dirc[i],acoustic_Sour[i])    
+            infinite_intersection,coef = self.vectorInfinitePlaneIntersection(plane_Dirc,acoustic_Dirc[i],acoustic_Sour[i])
             plane = self.plane_D
             normal_Direc = self.normal_Direction
             
@@ -117,12 +119,13 @@ class Simulation():
                     orthognal_Vector = self.randomGenerateOrthognal(temp_normal_direc)
                     cross_state = self.pointInFinitePlane(orthognal_Vector,temp_intersection_point,temp_plane)
                 
-                    if cross_state == 1:
+                    lenght_vec = np.linalg.norm(temp_intersection_point-acoustic_Sour[i])
+                    if cross_state == 1 and lenght_vec>1e-14:
                         intersection_point.append(temp_intersection_point)
                         plane_index.append(k)
                         ray_index.append(i)
         intersection_point = np.array(intersection_point)
-        assert intersection_point.shape==acoustic_Sour.shape
+        # assert intersection_point.shape==acoustic_Sour.shape
         
         return plane_index,ray_index,intersection_point
 
@@ -164,9 +167,9 @@ class Simulation():
     def reflection(self,alpha_List,scatter_List,plane_Index,acoustic_Dirc,normal_Dirc,insert_Preasure):
         
         '''
-            alpha_List is the list match the material absorption coefficient of the plane 
+            alpha_List is the list match the material absorption coefficient of the plane
             scatter_List is the list match the material scattering coefficient of the plane
-            plane_Index is the list match the 
+            plane_Index is the list match the
         '''
         
         alpha_list = []
