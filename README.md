@@ -50,7 +50,8 @@ In decreste time, it can express as:
 
 <img src="https://latex.codecogs.com/svg.image?h[n]=\sum_{k=n}^{N-1}f[k]g[n-k]" title="\Large https://latex.codecogs.com/svg.image?h[n]=\sum_{k=n}^{N-1}f[k]g[n-k]" />
 5. Vectorization:
-h[n] = X·G. Where X is the sound preasure. and G is the triangle matrix times init preasure
+h[n] = X·G. Where X is the sound preasure. and G is the triangle matrix times init preasure:
+<img src="https://latex.codecogs.com/svg.image?h[n]=\begin{bmatrix}x[0]\\x[1]\\\vdots\\x[N-1]\end{bmatrix}^{T}\cdot\begin{bmatrix}&space;1&&space;0&space;&&space;\ldots&space;&0&space;&space;\\&space;1&&space;1&space;&&space;&space;&&space;&space;\vdots\\&space;\vdots&&space;&space;&1&space;&space;&0&space;&space;\\1&space;&&space;\ldots&space;&1&space;&1&space;&space;\\\end{bmatrix}&space;\times&space;p_{init}" title="\Large https://latex.codecogs.com/svg.image?h[n]=\begin{bmatrix}x[0]\\x[1]\\\vdots\\x[N-1]\end{bmatrix}^{T}\cdot\begin{bmatrix}&space;1&&space;0&space;&&space;\ldots&space;&0&space;&space;\\&space;1&&space;1&space;&&space;&space;&&space;&space;\vdots\\&space;\vdots&&space;&space;&1&space;&space;&0&space;&space;\\1&space;&&space;\ldots&space;&1&space;&1&space;&space;\\\end{bmatrix}&space;\times&space;p_{init}" />
 
 
 ### AdaptiveDSP Result
