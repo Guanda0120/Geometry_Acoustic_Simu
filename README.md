@@ -5,7 +5,7 @@
 #### Scatter Testing Method
 **Ref**
 _Definition and measurement of random-incidence scattering coefficients_
->  ![alt text](https://github.com/Guanda0120/Geometry_Acoustic_Simu/blob/main/MdImg/ScatterTesting.png? raw=true)
+![alt text](https://github.com/Guanda0120/Geometry_Acoustic_Simu/blob/main/MdImg/ScatterTesting.png? raw=true)
 
 #### Lambert Law
 
