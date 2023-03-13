@@ -5,129 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ebe2493-3bea-48d7-9d29-4ec3a503066d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/Simulation.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/.___pycache__" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/AbsorptionOpt.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/AcousticRay.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/BaseAcoustic.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/CONST.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/ImageSourceRay.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/Material.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/MaterialDict.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/RayGroup.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/Receiver.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/ReceiverGroup.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/Source.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Acoustic/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AdaptiveDSP/.___pycache__" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AdaptiveDSP/RT_Process.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AdaptiveDSP/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/All_ref_0.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CONFIG.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/1075Theater.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/Abs_Research.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/Chapter_1.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/Chapter_5_Material.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/Figure_Draw.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/ImageSourceModule.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/LivingRoomDraw.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/NumRay_Research.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/Plot_Reflection_Coe.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/imgae_source_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/inter_check.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/n_order.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/permutation_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/pkl_open.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/pymoo.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/scikit_opt.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/try_sth.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/.___pycache__" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/ConvAudio.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/DataRecord.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/ExportData.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/ReadRhino.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/ReadRhino_2.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/ResponsePlot.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/im_2_rhino.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Graphic/._BaseGeometry.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Graphic/.___pycache__" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Graphic/BaseGeometry.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Graphic/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/._Reciver.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/._Simulation.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/.___pycache__" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/AcousticSource.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/AdaptiveDSP.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/Reciver.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/RoomGeometry.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/Settings.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/Simulation.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Object/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Real_Config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Reflection_Research.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/RoomGeometry/.___pycache__" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/RoomGeometry/FieldGeometry.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/RoomGeometry/Plane.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/RoomGeometry/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Simulation.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/SimulationMain.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs001.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs002.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs005.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs010.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs020.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs050.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs090.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/CONFIG_Abs099.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Absorption/Simple_Test.3dm" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_100TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_10TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_1TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_20TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_2TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_50TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/CONFIG_5TimesV.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/NumRay/Simple_Test.3dm" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca001.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca002.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca005.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca010.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca020.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca050.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca090.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/CONFIG_Sca099.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Scatter/Simple_Test.3dm" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/TestDict/Shape/1075Theater/Config1075Theater.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/125.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/1k.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/250.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/2k.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/4k.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/500.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1016_CATT_Theater_Simu/RT_All.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/125Hz.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/1kHz.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/250Hz.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/2kHz.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/4kHz.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/500Hz.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/1030_Test_Simple_Result/RT.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Diag.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/DirectionCorrection.gh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Explode.gh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Facade.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Simple_Test.3dm" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Simple_Test.3dmbak" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Test_Theater.3dm" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test_File/Test_Theater.3dmbak" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Debug/Simu_After.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Debug/Test2Simu.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FileIO/st_2_rhino.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Debug/Chapter_5_Material.py" beforeDir="false" afterPath="$PROJECT_DIR$/Debug/Chapter_5_Material.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FileIO/im_2_rhino.py" beforeDir="false" afterPath="$PROJECT_DIR$/FileIO/im_2_rhino.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -172,48 +55,6 @@
     </key>
   </component>
   <component name="RunManager" selected="Python.Chapter_5_Material">
-    <configuration name="1075Theater" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Simulation" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/1075Theater.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="Chapter_1" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Simulation" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/Chapter_1.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="Chapter_5_Material" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Simulation" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -235,7 +76,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Simulation" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="Simu_After" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Simulation" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -243,11 +84,32 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Simulation.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/Simu_After.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Test2Simu" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Simulation" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/Test2Simu.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -277,13 +139,34 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="st_2_rhino" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Simulation" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/FileIO" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/FileIO/st_2_rhino.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.Chapter_5_Material" />
-        <item itemvalue="Python.Chapter_1" />
+        <item itemvalue="Python.Simu_After" />
         <item itemvalue="Python.im_2_rhino" />
-        <item itemvalue="Python.Simulation" />
-        <item itemvalue="Python.1075Theater" />
+        <item itemvalue="Python.st_2_rhino" />
+        <item itemvalue="Python.Test2Simu" />
       </list>
     </recent_temporary>
   </component>
