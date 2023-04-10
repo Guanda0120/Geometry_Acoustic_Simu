@@ -5,12 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ebe2493-3bea-48d7-9d29-4ec3a503066d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Debug/Simu_After.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Debug/Test2Simu.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FileIO/st_2_rhino.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Acoustic/Eyring.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Debug/Chapter_5_Material.py" beforeDir="false" afterPath="$PROJECT_DIR$/Debug/Chapter_5_Material.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FileIO/im_2_rhino.py" beforeDir="false" afterPath="$PROJECT_DIR$/FileIO/im_2_rhino.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONFIG.py" beforeDir="false" afterPath="$PROJECT_DIR$/CONFIG.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Debug/Abs_Research.py" beforeDir="false" afterPath="$PROJECT_DIR$/Debug/Abs_Research.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Graphic/BaseGeometry.py" beforeDir="false" afterPath="$PROJECT_DIR$/Graphic/BaseGeometry.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RoomGeometry/Plane.py" beforeDir="false" afterPath="$PROJECT_DIR$/RoomGeometry/Plane.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Simulation.py" beforeDir="false" afterPath="$PROJECT_DIR$/Simulation.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,12 +40,13 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/12748/Desktop/XKOOL_WORK/Indus_Park&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/12748/Desktop/Simulation/TestDict/Shape/Theater_5057&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.IDE.editor.colors.Python&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\12748\Desktop\Simulation\TestDict\Shape\Theater_5057" />
       <recent name="C:\Users\12748\Desktop\Simulation\TestDict\Scatter" />
       <recent name="C:\Users\12748\Desktop\Simulation\TestDict\Absorption" />
       <recent name="C:\Users\12748\Desktop\Simulation\TestDict" />
@@ -54,7 +56,28 @@
       <recent name="C:\Users\12748\Desktop\Simulation\TestDict\NumRay" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.Chapter_5_Material">
+  <component name="RunManager" selected="Python.Eyring (1)">
+    <configuration name="Abs_Research" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Simulation" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/Abs_Research.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="Chapter_5_Material" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Simulation" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -76,7 +99,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Simu_After" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="Eyring (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Simulation" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -84,11 +107,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Acoustic" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/Simu_After.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Acoustic/Eyring.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -97,7 +120,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Test2Simu" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="Eyring" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Simulation" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -105,11 +128,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Debug" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Acoustic" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Debug/Test2Simu.py" />
+      <option name="SCRIPT_NAME" value="C:\Users\12748\Desktop\Simulation\Acoustic\Eyring.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -118,7 +141,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="im_2_rhino" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="Simulation" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Simulation" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -126,32 +149,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/FileIO" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/FileIO/im_2_rhino.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="st_2_rhino" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Simulation" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/FileIO" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/FileIO/st_2_rhino.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Simulation.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -162,11 +164,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.Eyring (1)" />
+        <item itemvalue="Python.Eyring" />
+        <item itemvalue="Python.Simulation" />
+        <item itemvalue="Python.Abs_Research" />
         <item itemvalue="Python.Chapter_5_Material" />
-        <item itemvalue="Python.Simu_After" />
-        <item itemvalue="Python.im_2_rhino" />
-        <item itemvalue="Python.st_2_rhino" />
-        <item itemvalue="Python.Test2Simu" />
       </list>
     </recent_temporary>
   </component>

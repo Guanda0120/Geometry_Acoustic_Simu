@@ -107,5 +107,5 @@ def simulation(Config: dict):
 
 
 if __name__ == '__main__':
-    import Real_Config
-    simulation(Real_Config.Config)
+    import CONFIG
+    simulation(CONFIG.Config)

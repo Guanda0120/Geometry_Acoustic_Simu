@@ -16,7 +16,7 @@ Config = {
         "Wood": np.array([0.10, 0.10, 0.10, 0.10, 0.10, 0.10])
     },
     # ====================================== Could Change Para ==========================================
-    'fileDir': r"C:\\Users\\12748\\Desktop\\Simulation\\Test_File\\Real_Work.3dm",
+    'fileDir': r"C:\\Users\\12748\\Desktop\\Simulation\\TestDict\\Shape\\Theater_5057\\Theater_5057.3dm",
     'num_ray': 315,
     'rt_method': "T60",
     # ====================================== Default Para ==============================================
@@ -28,5 +28,5 @@ Config = {
     'opt_max_res': 0.20,
     'model_name': 'JCA',
     # ====================================== Export Direction ==========================================
-    'output_folder': r'C:\\Users\\12748\\Desktop\\Simulation\\TestDict\\Shape\\RealWork'
+    'output_folder': r'C:\\Users\\12748\\Desktop\\Simulation\\TestDict\\Shape\\Theater_5057'
 }

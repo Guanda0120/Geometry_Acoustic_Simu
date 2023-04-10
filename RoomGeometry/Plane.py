@@ -26,7 +26,6 @@ class Plane:
 
         # Change the rhino data to Ndarray with shape (n,3)
         for idx in range(len(rhino_plane.Geometry.Edges)):
-
             # TODO BUG is Here: The point is not in the order
             # No closed polygon
             pt_1 = rhino_plane.Geometry.Edges[idx].PointAtStart
@@ -47,11 +46,11 @@ class Plane:
         while len(rest_plane) != 0:
             compare_pt = tmp_plane[-1][1, :]
             for idx in range(len(rest_plane)):
-                if (compare_pt == rest_plane[idx][0, :]).all():
+                if np.allclose(compare_pt, rest_plane[idx][0, :]):
                     tmp_plane.append(rest_plane[idx])
                     del rest_plane[idx]
                     break
-                elif (compare_pt == rest_plane[idx][1, :]).all():
+                elif np.allclose(compare_pt, rest_plane[idx][1, :]):
                     tmp_plane.append(np.array([rest_plane[idx][1, :], rest_plane[idx][0, :]]))
                     del rest_plane[idx]
                     break
@@ -70,6 +69,7 @@ class Plane:
         self.array_plane = np.array(self.array_plane)
         self.planar_state = BaseGeometry.is_planar(self.polygon)
         self.normal_direc, self.cen_pt, self.intercept_d = BaseGeometry.normal_direction(self.polygon)
+        self.area = BaseGeometry.area(polygon, self.cen_pt)
 
     def __str__(self):
         return f"The plane is {self.polygon}. The material is {self.material_name}"

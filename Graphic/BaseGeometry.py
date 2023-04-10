@@ -278,6 +278,26 @@ class BaseGeometry:
 
         return inside_flag
 
+    @staticmethod
+    def area(polygon: np.ndarray, cen_pt: np.ndarray):
+        """
+        Compute the area of a 3d polygon
+        :param polygon: the point represent polygon
+        :param cen_pt: the center point of the polygon
+        :return:
+        """
+        if (polygon[0, :] != polygon[-1, :]).any():
+            polygon = np.vstack((polygon, np.array([polygon[0]])))
+
+        area = 0
+        for i in range(polygon.shape[0] - 1):
+            vec_1 = polygon[i] - cen_pt
+            vec_2 = polygon[i + 1] - cen_pt
+            tmp_tri = 0.5 * np.linalg.norm(np.cross(vec_1, vec_2))
+            area += tmp_tri
+        area = np.abs(area)
+        return area
+
     def cross_polygon(self, pt_1: np.ndarray, pt_2: np.ndarray, plane_normal: np.ndarray, plane_polygon: np.ndarray):
         """
         Check the finite line construct with pt_1 and pt_2 cross a plane or not.
