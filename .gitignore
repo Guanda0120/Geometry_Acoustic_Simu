@@ -179,3 +179,5 @@ models/private/
 .DS_Store
 ._*
 .idea/
+# Copyrighted reference PDFs: local only
+references/pdf/
