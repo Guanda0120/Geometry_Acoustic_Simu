@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The only engine so far is the one from the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), cleaned up so that it runs on macOS/Linux/Windows. Its propagation physics has known errors (see below) and is being replaced by a new engine in `src/gasim/` — see [docs/rewrite-plan.md](docs/rewrite-plan.md). Do not use its results for design decisions.
+> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). So far it reads and checks room models (`gasim check`); simulations still run on the engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), whose propagation physics has known errors (see below). Do not use its results for design decisions.
 
 ## Layout
 
@@ -10,9 +10,16 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 ├── main.py              run from a source checkout: python main.py <command>
 ├── pyproject.toml       package metadata and dependencies (uv)
 ├── src/gasim/
-│   ├── cli.py           command line interface (gasim run / eyring / export-paths)
+│   ├── cli.py           command line interface (gasim check / run / eyring / export-paths)
+│   ├── config.py        TOML configs
+│   ├── materials.py     absorption and scattering per octave band
+│   ├── air.py           speed of sound, ISO 9613-1 air absorption
+│   ├── geometry/        Room arrays, triangulation, inward normals, model checks
+│   ├── io/rhino.py      .3dm reader
+│   ├── analysis/        Sabine / Eyring
 │   └── legacy/          thesis-2023 engine, physics unchanged
-├── configs/legacy/      run settings of the thesis (rooms and sweeps)
+├── configs/             TOML configs of the rooms
+│   └── legacy/          run settings of the thesis engine (rooms and sweeps)
 ├── models/              Rhino models of the synthetic test rooms
 │   └── private/         real buildings, git-ignored
 ├── tests/               pytest
@@ -24,7 +31,7 @@ Measurement data and the paper draft are kept outside this repository.
 
 ## Setup
 
-Python 3.10+ and [uv](https://docs.astral.sh/uv/):
+Python 3.11+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
@@ -34,7 +41,13 @@ This creates `.venv/` with the package and pytest. Without uv: `python -m venv .
 
 ## Run
 
-From the repository root (config paths are relative to it):
+From the repository root (config paths are relative to it). Check a room model and get its Sabine/Eyring reverberation time:
+
+```bash
+uv run gasim check configs/test_room.toml
+```
+
+This reports polygons, volume, surface per material, whether source and receivers are inside, rays leaking out of the model and overlapping coplanar surfaces, and exits non-zero if a check fails. Run a simulation with the thesis engine:
 
 ```bash
 uv run gasim run configs/legacy/test_room.py
@@ -45,7 +58,7 @@ uv run gasim run configs/legacy/test_room.py
 Other commands:
 
 ```bash
-uv run gasim eyring configs/legacy/test_room.py --volume 315        # Sabine/Eyring reference
+uv run gasim eyring configs/legacy/test_room.py --volume 315        # Sabine/Eyring with the legacy materials code
 uv run gasim export-paths image output/test_room/rec_0.pkl paths.3dm  # image-source paths to Rhino
 uv run pytest                                                       # tests, about 5 s
 uv run ruff check                                                   # lint (CI runs both on every PR)
@@ -55,12 +68,37 @@ uv run ruff check                                                   # lint (CI r
 
 | Config | Model | Notes |
 |---|---|---|
-| `configs/legacy/test_room.py` | `models/Simple_Test.3dm` | 9 × 7 × 5 m box, quick check |
+| `configs/test_room.toml` | `models/Simple_Test.3dm` | 9 × 7 × 5 m box, quick check |
+| `configs/theater_1075.toml`, `theater_5057.toml`, `l2b.toml` | `models/*.3dm` | synthetic shape tests |
+| `configs/classroom.toml`, `lecture_hall.toml`, `mf_hall.toml` | `models/private/*.3dm` | real buildings — models are not published |
+| `configs/legacy/test_room.py` | `models/Simple_Test.3dm` | thesis engine: 9 × 7 × 5 m box |
 | `configs/legacy/sweeps/absorption_*.py`, `scatter_*.py`, `rays_*xV.py` | `models/Simple_Test.3dm` | absorption, scattering and ray-count sweeps |
 | `configs/legacy/theater_1075.py`, `theater_5057.py`, `l2b.py` | `models/*.3dm` | synthetic shape tests |
 | `configs/legacy/classroom.py`, `lecture_hall_*.py`, `mf_hall.py` | `models/private/*.3dm` | real buildings — models are not published |
 
-The configs were ported from the thesis runs; only file paths were changed. In a `.3dm` file every layer is a material, except `Source` and `Receiver` (points), and `Center_pt` / `Direc_line`, which fix the surface normal directions.
+All configs were ported from the thesis runs (materials and ray counts unchanged); the materials of the real rooms have not yet been reconciled with the paper's appendix. A TOML config looks like:
+
+```toml
+[room]
+model = "models/Simple_Test.3dm"
+
+[materials]   # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Wood = { absorption = [0.10, 0.20, 0.10, 0.20, 0.30, 0.40], scattering = 0.10 }
+
+[simulation]  # all optional
+rays = 31500
+ism_order = 3
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 3.0
+seed = 1
+
+[air]         # optional
+temperature = 20.0
+humidity = 50.0
+```
+
+In a `.3dm` file every layer with surfaces is a material; points on `Source` (exactly one) and `Receiver` are the source and receivers. Surfaces must be planar polygons without holes, in metres, centimetres or millimetres. The new engine orients normals itself; the legacy layers `Center_pt` / `Direc_line` are only read by the thesis engine.
 
 ## Known issues of the legacy engine
 

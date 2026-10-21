@@ -1,0 +1,26 @@
+# lecture hall; values from the thesis run (JianZuRenew_Config), not yet checked against the paper appendix
+# Ported from configs/legacy/lecture_hall_jianzu_renew.py
+
+[room]
+model = "models/private/JianZuTest.3dm"
+
+[materials]  # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Glass            = { absorption = [0.03, 0.03, 0.02, 0.02, 0.01, 0.01], scattering = 0.10 }
+Absorber         = { absorption = [0.30, 0.45, 0.35, 0.55, 0.55, 0.80], scattering = 0.10 }
+Door             = { absorption = [0.12, 0.12, 0.11, 0.09, 0.08, 0.10], scattering = 0.10 }
+Ceil             = { absorption = [0.05, 0.18, 0.30, 0.25, 0.25, 0.60], scattering = 0.10 }
+Floor            = { absorption = [0.01, 0.01, 0.01, 0.02, 0.02, 0.02], scattering = 0.10 }
+Front            = { absorption = [0.05, 0.20, 0.30, 0.25, 0.25, 0.60], scattering = 0.10 }
+Absorption_Plane = { absorption = [0.35, 0.45, 0.40, 0.55, 0.55, 0.90], scattering = 0.10 }
+
+[simulation]
+rays = 20000
+ism_order = 4
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 3.0
+seed = 1
+
+[air]
+temperature = 20.0
+humidity = 50.0

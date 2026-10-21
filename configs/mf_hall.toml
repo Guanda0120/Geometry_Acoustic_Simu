@@ -1,0 +1,27 @@
+# multifunction hall before renovation; values from the thesis run, not yet checked against the paper appendix
+# Ported from configs/legacy/mf_hall.py
+
+[room]
+model = "models/private/Real_Work.3dm"
+
+[materials]  # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Door   = { absorption = [0.18, 0.15, 0.10, 0.10, 0.10, 0.10], scattering = 0.10 }
+Floor  = { absorption = [0.02, 0.01, 0.02, 0.02, 0.02, 0.03], scattering = 0.10 }
+Wood   = { absorption = [0.27, 0.42, 0.85, 0.42, 0.48, 0.50], scattering = 0.10 }
+Glass  = { absorption = [0.04, 0.03, 0.04, 0.04, 0.05, 0.05], scattering = 0.10 }
+Led    = { absorption = [0.03, 0.05, 0.04, 0.04, 0.04, 0.04], scattering = 0.10 }
+Woolen = { absorption = [0.35, 0.42, 0.85, 0.39, 0.52, 0.50], scattering = 0.10 }
+Col    = { absorption = [0.02, 0.01, 0.02, 0.02, 0.02, 0.03], scattering = 0.10 }
+White  = { absorption = [0.23, 0.15, 0.30, 0.21, 0.32, 0.24], scattering = 0.10 }
+
+[simulation]
+rays = 20000
+ism_order = 3
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 4.0
+seed = 1
+
+[air]
+temperature = 20.0
+humidity = 50.0
