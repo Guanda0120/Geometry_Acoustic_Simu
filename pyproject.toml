@@ -17,7 +17,10 @@ dependencies = [
 gasim = "gasim.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.17.1",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -28,3 +31,8 @@ packages = ["src/gasim"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+# The thesis engine is frozen until it is removed (see docs/rewrite-plan.md)
+extend-exclude = ["src/gasim/legacy", "configs/legacy"]
