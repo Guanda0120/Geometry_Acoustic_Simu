@@ -1,0 +1,30 @@
+[project]
+name = "gasim"
+version = "0.1.0"
+description = "Hybrid geometrical-acoustics room simulation on Rhinoceros models"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Guanda Li" }]
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.9",
+    "lmfit>=1.1",
+    "matplotlib>=3.6",
+    "rhino3dm>=7.15",
+]
+
+[project.scripts]
+gasim = "gasim.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gasim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
