@@ -1,10 +1,10 @@
 import os
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
-import pylab
-import scipy
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import scipy.io.wavfile
 from Acoustic.ReceiverGroup import ReceiverGroup
 from Acoustic.Receiver import Receiver
 from Acoustic.BaseAcoustic import BaseAcoustic
@@ -18,10 +18,8 @@ class ExportData:
         :param export_folder:
         """
         self.rec_group = rec_group
-        if os.path.exists(export_folder):
-            self.export_folder = export_folder
-        else:
-            ValueError(f'The output folder {export_folder} do not exist')
+        os.makedirs(export_folder, exist_ok=True)
+        self.export_folder = export_folder
 
     def _match_fs(self, rec: Receiver):
         # A Sample time duration
@@ -75,9 +73,8 @@ class ExportData:
         :param rec_id: The rec id
         :return: A png file
         """
-        matplotlib.use('Agg')
-        file_name = f"\\rec_{int(rec_id)}.png"
-        export_dir = self.export_folder + file_name
+        file_name = f"rec_{int(rec_id)}.png"
+        export_dir = os.path.join(self.export_folder, file_name)
 
         # Load Data
         direc_res = BaseAcoustic.pressure2spl(np.array(rec.direc_pressure))
@@ -105,7 +102,7 @@ class ExportData:
 
         # Plot the Impulse Response
         # Chinese font set
-        plt.rcParams["font.sans-serif"] = ["SimHei"]
+        plt.rcParams["font.sans-serif"] = ["SimHei", "PingFang SC", "Heiti SC", "Arial Unicode MS", "DejaVu Sans"]
         plt.rcParams["axes.unicode_minus"] = False
 
         # Plot Data
@@ -300,6 +297,7 @@ class ExportData:
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.4, hspace=0.4)
         # plt.show()
         plt.savefig(export_dir)
+        plt.close(fig)
         print(f"File {export_dir} exports successfully!")
 
     def _record_data(self, rec: Receiver, rec_id: int):
@@ -310,8 +308,8 @@ class ExportData:
         :return: A pkl file inside the folder
         """
         # Create the file direction
-        file_name = f"\\rec_{str(rec_id)}.pkl"
-        export_dir = self.export_folder + file_name
+        file_name = f"rec_{str(rec_id)}.pkl"
+        export_dir = os.path.join(self.export_folder, file_name)
         # Open the file
         data_output = open(export_dir, 'wb')
         # Remove Rhino3dm object
@@ -348,19 +346,18 @@ class ExportData:
         """
 
         if rec_id > len(self.rec_group.receiver_container):
-            ValueError('The index is out of receiver container number.')
-        file_name = f"\\rec_{str(rec_id)}_res.wav"
-        export_dir = self.export_folder + file_name
+            raise ValueError('The index is out of receiver container number.')
+        file_name = f"rec_{str(rec_id)}_res.wav"
+        export_dir = os.path.join(self.export_folder, file_name)
 
         # Keep the real part of the impulse response, transform the Data type as np.float32
         sample = np.real(np.sum(self.rec_group.receiver_container[rec_id].fs_pressure, axis=1)).astype(np.float32)
         # Save the Impulse response
         scipy.io.wavfile.write(export_dir, 44100, sample)
         print(f"File {export_dir} exports successfully!")
-        matplotlib.use('Agg')
         # Plot the Impulse Response
         # Chinese font set
-        plt.rcParams["font.sans-serif"] = ["SimHei"]
+        plt.rcParams["font.sans-serif"] = ["SimHei", "PingFang SC", "Heiti SC", "Arial Unicode MS", "DejaVu Sans"]
         plt.rcParams["axes.unicode_minus"] = False
 
         plt.subplot(211)
@@ -381,8 +378,8 @@ class ExportData:
         plt.xticks(size=25)
         plt.colorbar(cax).set_label('强度 (dB)')
 
-        ir_file_name = f"\\rec_{str(rec_id)}_res.png"
-        ir_export_dir = self.export_folder + ir_file_name
+        ir_file_name = f"rec_{str(rec_id)}_res.png"
+        ir_export_dir = os.path.join(self.export_folder, ir_file_name)
         plt.savefig(ir_export_dir)
         plt.close()
         print(f"File {ir_export_dir} exports successfully!")
@@ -403,10 +400,10 @@ class ExportData:
         :return:
         """
         if not os.path.exists(ori_audio_dir):
-            ValueError('The original file is not exist.')
+            raise ValueError('The original file is not exist.')
 
         if rec_id > len(self.rec_group.receiver_container):
-            ValueError('The index is out of receiver container number.')
+            raise ValueError('The index is out of receiver container number.')
 
         # Read the audio file
         ori_fs, ori_wave = scipy.io.wavfile.read(ori_audio_dir)
@@ -423,6 +420,6 @@ class ExportData:
         wave_conv = np.convolve(ori_wave, sample, mode='full').astype(np.float32)
 
         # Save the file
-        file_name = f"\\rec_{str(rec_id)}_conv.wav"
-        output_file_dir = self.export_folder + file_name
+        file_name = f"rec_{str(rec_id)}_conv.wav"
+        output_file_dir = os.path.join(self.export_folder, file_name)
         scipy.io.wavfile.write(output_file_dir, ori_fs, wave_conv)

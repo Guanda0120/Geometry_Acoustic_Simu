@@ -1,5 +1,5 @@
 import numpy as np
-import scipy
+import scipy.optimize
 import lmfit
 from Acoustic.CONST import acoustic_speed, air_rho
 

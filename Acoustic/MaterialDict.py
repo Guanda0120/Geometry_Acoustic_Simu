@@ -19,9 +19,3 @@ class MaterialDict:
         for key in abs_dict.keys():
             self.material_dict[key] = Material(key, abs_dict[key], sca_dict[key], plane_wave_model=self.model_name,
                                                opt_max_res=self.opt_max_res)
-
-
-if __name__ == '__main__':
-    from CONFIG import absorptionDict, scatterDict, opt_max_res, model_name
-    mat_dict = MaterialDict(absorptionDict, scatterDict, model_name=model_name, opt_max_res=opt_max_res)
-    print(mat_dict.material_dict)

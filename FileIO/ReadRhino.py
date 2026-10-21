@@ -97,7 +97,7 @@ class Read3dm:
 
 
 if __name__ == "__main__":
-    path = r"C:\\Users\\李冠达\\Desktop\\Simulation\\Test_File\\Simple_Test.3dm"
+    path = "models/Simple_Test.3dm"
     model = Read3dm(path)
     a,b,c,d = model.convert_file()
     print(f"Direct line is {d}")

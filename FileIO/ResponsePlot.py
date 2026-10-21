@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from Acoustic.Receiver import Receiver
@@ -12,8 +13,8 @@ def plot_res(rec: Receiver, output_folder: str, rec_id: int):
     :param rec_id: the id
     :return: Save the figure
     """
-    file_name = f"\\rec_{int(rec_id)}.png"
-    export_dir = output_folder+file_name
+    file_name = f"rec_{int(rec_id)}.png"
+    export_dir = os.path.join(output_folder, file_name)
 
     # Load Data
     direc_res = BaseAcoustic.pressure2spl(np.array(rec.direc_pressure))

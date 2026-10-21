@@ -73,18 +73,3 @@ class Plane:
 
     def __str__(self):
         return f"The plane is {self.polygon}. The material is {self.material_name}"
-
-
-if __name__ == "__main__":
-    from FileIO.ReadRhino import Read3dm
-    path = "/Users/liguanda/Desktop/MasterReasearch/MasterFinal/code/Simu/Test_File/Test_Theater.3dm"
-    rhino_file = Read3dm(path)
-    plane_dict, _, _ = rhino_file.convert_file()
-    plane_list = []
-    for key in plane_dict.keys():
-        for rh_plane in plane_dict[key]:
-            tmp_plane = Plane(rh_plane,np.asarray([0.1,0.1,0.1,0.1,0.1]),np.asarray([0.1,0.1,0.1,0.1,0.1]),key)
-            plane_list.append(tmp_plane)
-            print(f"Array: {tmp_plane.polygon}, is planar: {tmp_plane.planar_state}, "
-                  f"normal direction is: {tmp_plane.normal_direc}")
-    print(f"Total {len(plane_list)} planes")

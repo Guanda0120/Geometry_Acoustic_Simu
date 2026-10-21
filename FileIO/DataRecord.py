@@ -20,7 +20,7 @@ def rec_to_json(rec: Receiver, output_folder: str, rec_id: int):
     exist_state = os.path.exists(output_folder)
     if exist_state:
         rec_json = json.dumps(rec_dict, indent=4, ensure_ascii=False)
-        out_file_path = os.path.join(output_folder, f"\\rec_{str(rec_id)}.json")
+        out_file_path = os.path.join(output_folder, f"rec_{str(rec_id)}.json")
         with open(out_file_path, 'w', encoding="utf-8") as json_file:
             json.dump(rec_json, json_file)
 
@@ -39,8 +39,8 @@ def rec2pkl(rec: Receiver, output_folder: str, rec_id: int):
         i.sound_field = None
 
     if exist_state:
-        file_name = f"\\rec_{str(rec_id)}.pkl"
-        file_dir = output_folder+file_name
+        file_name = f"rec_{str(rec_id)}.pkl"
+        file_dir = os.path.join(output_folder, file_name)
         data_output = open(file_dir, 'wb')
         pickle.dump(rec, data_output)
         data_output.close()

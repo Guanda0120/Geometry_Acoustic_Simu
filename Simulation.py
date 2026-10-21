@@ -1,4 +1,7 @@
+import os
+import sys
 import time
+import importlib.util
 from FileIO.ReadRhino import Read3dm
 from RoomGeometry.FieldGeometry import FieldGeometry
 from Acoustic.RayGroup import RayGroup
@@ -7,20 +10,44 @@ from Acoustic.Source import Source
 from Acoustic.MaterialDict import MaterialDict
 from FileIO.ExportData import ExportData
 
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CONFIG = os.path.join(REPO_ROOT, 'configs', 'test_room.py')
+
+
+def load_config(config_path: str):
+    """
+    Load the Config dict from a config file such as configs/test_room.py
+    :param config_path: Path of the config file
+    :return: The Config dict
+    """
+    spec = importlib.util.spec_from_file_location('run_config', config_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.Config
+
+
+def repo_path(path: str):
+    """
+    Resolve a path in the config relative to the repository root
+    :param path: Absolute path, or path relative to the repository root
+    :return: Absolute path
+    """
+    return path if os.path.isabs(path) else os.path.join(REPO_ROOT, path)
+
 
 def simulation(Config: dict):
 
     # Get The Parameter
     absorptionDict = Config['absorptionDict']
     scatterDict = Config['scatterDict']
-    fileDir = Config['fileDir']
+    fileDir = repo_path(Config['fileDir'])
     init_swl = Config['init_swl']
     num_ray = Config['num_ray']
     rt_method = Config['rt_method']
     receiver_radius = Config['receiver_radius']
     end_rt_spl = Config['end_rt_spl']
     im_order = Config['im_order']
-    output_folder = Config['output_folder']
+    output_folder = repo_path(Config['output_folder'])
     sample_freq = Config['sample_freq']
     opt_max_res = Config['opt_max_res']
     model_name = Config['model_name']
@@ -107,5 +134,5 @@ def simulation(Config: dict):
 
 
 if __name__ == '__main__':
-    import CONFIG
-    simulation(CONFIG.Config)
+    # Usage: python Simulation.py [configs/<name>.py]
+    simulation(load_config(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG))

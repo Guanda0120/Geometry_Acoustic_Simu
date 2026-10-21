@@ -64,7 +64,6 @@ def im2rhino(pickle_dir: str, out_sir: str):
 
 
 if __name__ == '__main__':
-    pickle_dir = r"D:\\PlanningHall\\rec_5.pkl"
-    rhino_dir = r'C:\Users\12748\Desktop\PlHa_rec5.3dm'
-    im2rhino(pickle_dir, rhino_dir)
-
+    # Usage: python -m FileIO.im_2_rhino output/<run>/rec_0.pkl paths.3dm
+    import sys
+    im2rhino(sys.argv[1], sys.argv[2])

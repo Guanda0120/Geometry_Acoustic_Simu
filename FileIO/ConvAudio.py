@@ -1,4 +1,4 @@
-import scipy
+import scipy.io.wavfile
 import numpy as np
 from Acoustic.Receiver import Receiver
 

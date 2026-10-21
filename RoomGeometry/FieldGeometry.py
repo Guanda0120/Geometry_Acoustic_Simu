@@ -48,14 +48,3 @@ class FieldGeometry:
 
     def __str__(self):
         return f"The Sound Field Have {len(self.plane)} planes. Use {len(self.material_dict.material_dict)} Kinds of Material."
-
-
-if __name__ == "__main__":
-    from CONFIG import absorptionDict, scatterDict, fileDir
-    from FileIO.ReadRhino import Read3dm
-
-    rh_model = Read3dm(fileDir)
-    rh_plane, receiver, source, correct_direc = rh_model.convert_file()
-    sound_field = FieldGeometry(rh_plane, absorptionDict, scatterDict,correct_direc)
-    direc_line = [tmp_plane.normal_direc for tmp_plane in sound_field.plane]
-    print(np.asarray(direc_line))

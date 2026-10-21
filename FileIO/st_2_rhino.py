@@ -54,7 +54,6 @@ def st2rhino(pickle_dir: str, out_sir: str):
 
 
 if __name__ == '__main__':
-    pickle_dir = r"D:\\PlanningHall\\rec_0.pkl"
-    rhino_dir = r'C:\Users\12748\Desktop\Real_rec0.3dm'
-    st2rhino(pickle_dir, rhino_dir)
-
+    # Usage: python -m FileIO.st_2_rhino output/<run>/rec_0.pkl paths.3dm
+    import sys
+    st2rhino(sys.argv[1], sys.argv[2])

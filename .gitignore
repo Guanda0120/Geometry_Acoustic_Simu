@@ -167,3 +167,15 @@ TestDict/
 BackUp/
 .record
 record/
+
+# ---- Project specific ----
+# Simulation results (pickles can be hundreds of MB per receiver)
+output/
+# Models of real buildings: keep local until cleared for publication
+models/private/
+# Rhino backups
+*.3dmbak
+# macOS / IDE
+.DS_Store
+._*
+.idea/
