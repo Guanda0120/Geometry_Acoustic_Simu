@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The only engine so far is the one from the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), cleaned up so that it runs on macOS/Linux/Windows. Its propagation physics has known errors (see below) and is being replaced by a new engine in `src/gasim/`. Do not use its results for design decisions.
+> **Status.** The only engine so far is the one from the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), cleaned up so that it runs on macOS/Linux/Windows. Its propagation physics has known errors (see below) and is being replaced by a new engine in `src/gasim/` — see [docs/rewrite-plan.md](docs/rewrite-plan.md). Do not use its results for design decisions.
 
 ## Layout
 
@@ -16,6 +16,7 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 ├── models/              Rhino models of the synthetic test rooms
 │   └── private/         real buildings, git-ignored
 ├── tests/               pytest
+├── docs/                design notes (rewrite plan)
 └── references/          key literature (see references/README.md)
 ```
 
