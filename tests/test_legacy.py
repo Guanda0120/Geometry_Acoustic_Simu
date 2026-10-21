@@ -3,11 +3,11 @@ import numpy as np
 import pytest
 
 from gasim.cli import main
-from gasim.legacy.simulation import load_config, simulation, resolve_path
 from gasim.legacy.Acoustic.Eyring import eyring
 from gasim.legacy.Acoustic.MaterialDict import MaterialDict
 from gasim.legacy.FileIO.ReadRhino import Read3dm
 from gasim.legacy.RoomGeometry.FieldGeometry import FieldGeometry
+from gasim.legacy.simulation import load_config, resolve_path, simulation
 
 TEST_ROOM = 'configs/legacy/test_room.py'
 

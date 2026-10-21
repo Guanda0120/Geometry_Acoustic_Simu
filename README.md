@@ -48,6 +48,7 @@ Other commands:
 uv run gasim eyring configs/legacy/test_room.py --volume 315        # Sabine/Eyring reference
 uv run gasim export-paths image output/test_room/rec_0.pkl paths.3dm  # image-source paths to Rhino
 uv run pytest                                                       # tests, about 5 s
+uv run ruff check                                                   # lint (CI runs both on every PR)
 ```
 
 ## Configs and models

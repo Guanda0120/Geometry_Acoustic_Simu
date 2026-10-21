@@ -17,11 +17,11 @@ def _eyring(args: argparse.Namespace):
     Print the Sabine and Eyring reverberation time of the room in a config file
     :param args: Parsed arguments with config and volume
     """
-    from gasim.legacy.simulation import load_config, resolve_path
-    from gasim.legacy.Acoustic.MaterialDict import MaterialDict
     from gasim.legacy.Acoustic.Eyring import eyring
+    from gasim.legacy.Acoustic.MaterialDict import MaterialDict
     from gasim.legacy.FileIO.ReadRhino import Read3dm
     from gasim.legacy.RoomGeometry.FieldGeometry import FieldGeometry
+    from gasim.legacy.simulation import load_config, resolve_path
 
     config = load_config(args.config)
     material_dict = MaterialDict(config['absorptionDict'], config['scatterDict'],
