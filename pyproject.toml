@@ -3,7 +3,7 @@ name = "gasim"
 version = "0.1.0"
 description = "Hybrid geometrical-acoustics room simulation on Rhinoceros models"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "Guanda Li" }]
 dependencies = [
     "numpy>=1.23",

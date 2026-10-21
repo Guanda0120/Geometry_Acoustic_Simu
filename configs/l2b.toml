@@ -1,0 +1,23 @@
+# synthetic L-shaped test room
+# Ported from configs/legacy/l2b.py
+
+[room]
+model = "models/L2B_Test.3dm"
+
+[materials]  # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Woolen  = { absorption = [0.15, 0.20, 0.30, 0.45, 0.52, 0.40], scattering = 0.10 }
+Mat     = { absorption = [0.15, 0.20, 0.30, 0.45, 0.45, 0.40], scattering = 0.10 }
+Plaster = { absorption = [0.01, 0.02, 0.05, 0.10, 0.15, 0.20], scattering = 0.10 }
+Wood    = { absorption = [0.10, 0.20, 0.10, 0.20, 0.30, 0.40], scattering = 0.10 }
+
+[simulation]
+rays = 21500
+ism_order = 3
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 3.0
+seed = 1
+
+[air]
+temperature = 20.0
+humidity = 50.0

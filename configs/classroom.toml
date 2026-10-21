@@ -1,0 +1,25 @@
+# classroom (model 9.6 x 7.7 x 3.0 m); values from the thesis run, not yet checked against the paper appendix
+# Ported from configs/legacy/classroom.py
+
+[room]
+model = "models/private/Real_ClassRoom.3dm"
+
+[materials]  # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Glass      = { absorption = [0.03, 0.03, 0.02, 0.02, 0.01, 0.01], scattering = 0.10 }
+Wood       = { absorption = [0.17, 0.12, 0.11, 0.09, 0.08, 0.10], scattering = 0.10 }
+BlackBoard = { absorption = [0.01, 0.01, 0.01, 0.02, 0.02, 0.02], scattering = 0.10 }
+White      = { absorption = [0.02, 0.02, 0.03, 0.02, 0.03, 0.04], scattering = 0.10 }
+Roof       = { absorption = [0.11, 0.25, 0.18, 0.25, 0.19, 0.14], scattering = 0.10 }
+Floor      = { absorption = [0.01, 0.01, 0.01, 0.02, 0.02, 0.02], scattering = 0.10 }
+
+[simulation]
+rays = 9160
+ism_order = 5
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 3.0
+seed = 1
+
+[air]
+temperature = 20.0
+humidity = 50.0

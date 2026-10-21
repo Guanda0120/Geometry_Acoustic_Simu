@@ -35,6 +35,50 @@ def _eyring(args: argparse.Namespace):
     print(f"The Average Absorption Coe is {alpha_avg}")
 
 
+def _check(args: argparse.Namespace):
+    """
+    Load the room of a TOML config, check the model and print Sabine/Eyring reverberation times
+    :param args: Parsed arguments with config
+    :return: Exit code, 0 if all checks pass
+    """
+    from gasim.air import energy_attenuation, speed_of_sound
+    from gasim.analysis.statistical import eyring, sabine
+    from gasim.bands import OCTAVE_BANDS
+    from gasim.config import load_config
+    from gasim.geometry import load_room
+    from gasim.geometry.checks import check_room
+
+    config = load_config(args.config)
+    room, skipped = load_room(config)
+    report = check_room(room)
+
+    areas = room.area_by_material()
+    used = ' | '.join(f"{name} {area:.1f} m2" for name, area in areas.items() if area > 0)
+    unused = [name for name, area in areas.items() if area == 0]
+    print(f"Model      {config.model}")
+    print(f"Polygons   {room.n_polygons} ({len(room.tri_vertices)} triangles), "
+          f"{int(room.poly_flipped.sum())} normals reversed to point inwards")
+    print(f"Volume     {room.volume:.1f} m3, surface {room.surface_area:.1f} m2")
+    print(f"Materials  {used}" + (f" | unused: {', '.join(unused)}" if unused else ""))
+    print(f"Source     {'inside' if report.source_inside else 'OUTSIDE'}; receivers inside: "
+          f"{int(report.receivers_inside.sum())} of {len(report.receivers_inside)}")
+    print(f"Leaks      {report.escaped_rays} of {report.traced_rays} rays escaped")
+    overlaps = ', '.join(f"{room.poly_layer[i]}/{room.poly_layer[j]} ({i}, {j})" for i, j in report.overlaps)
+    print(f"Overlaps   {overlaps or 'none'}")
+    print(f"Skipped    {', '.join(f'{kind} on {layer}' for layer, kind in skipped) or 'none'}")
+
+    air = config.air
+    c = speed_of_sound(air.temperature)
+    m = energy_attenuation(air.temperature, air.humidity, air.pressure)
+    print()
+    print('Band (Hz) ' + ''.join(f'{band:>8.0f}' for band in OCTAVE_BANDS))
+    print('Sabine (s)' + ''.join(f'{t:>8.2f}' for t in sabine(room, c, m)))
+    print('Eyring (s)' + ''.join(f'{t:>8.2f}' for t in eyring(room, c, m)))
+    print(f"Air        {air.temperature} degC, {air.humidity} % RH, c = {c:.1f} m/s")
+    print('OK' if report.ok else 'CHECK FAILED')
+    return 0 if report.ok else 1
+
+
 def _export_paths(args: argparse.Namespace):
     """
     Write the image-source or stochastic paths of a saved receiver to a Rhino file
@@ -61,7 +105,11 @@ def build_parser():
                      help='propagation engine (only the thesis-2023 engine for now)')
     run.set_defaults(func=_run)
 
-    eyr = sub.add_parser('eyring', help='Sabine/Eyring reverberation time of a config room')
+    chk = sub.add_parser('check', help='check the room model of a TOML config, print Sabine/Eyring')
+    chk.add_argument('config', help='TOML config, e.g. configs/test_room.toml')
+    chk.set_defaults(func=_check)
+
+    eyr = sub.add_parser('eyring', help='Sabine/Eyring reverberation time of a legacy config room')
     eyr.add_argument('config', help='config file')
     eyr.add_argument('--volume', type=float, required=True, help='room volume in m3')
     eyr.set_defaults(func=_eyring)
@@ -82,5 +130,4 @@ def main(argv=None):
     :return: Exit code
     """
     args = build_parser().parse_args(argv)
-    args.func(args)
-    return 0
+    return args.func(args) or 0
