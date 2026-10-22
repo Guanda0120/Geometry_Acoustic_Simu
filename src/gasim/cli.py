@@ -26,6 +26,12 @@ def _run(args: argparse.Namespace):
     from gasim.io.results import save_result
     from gasim.simulate import simulate
 
+    if args.threads is not None:
+        import numba
+        if not 1 <= args.threads <= numba.config.NUMBA_NUM_THREADS:
+            raise SystemExit(f"--threads must lie in 1 .. {numba.config.NUMBA_NUM_THREADS}")
+        numba.set_num_threads(args.threads)
+
     config = load_config(config_path)
     result = simulate(config)
     output = Path(args.output) if args.output else Path('output') / config_path.stem / 'result.npz'
@@ -164,6 +170,8 @@ def build_parser():
     run.add_argument('config', help='TOML config (new engine), e.g. configs/test_room.toml, '
                                     'or Python config (thesis engine), e.g. configs/legacy/test_room.py')
     run.add_argument('--output', help='result file of the new engine, default output/<config name>/result.npz')
+    run.add_argument('--threads', type=int, help='CPU threads of the new engine, default all; results do not '
+                                                 'depend on it')
     run.set_defaults(func=_run)
 
     chk = sub.add_parser('check', help='check the room model of a TOML config, print Sabine/Eyring')

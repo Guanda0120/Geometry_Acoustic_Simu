@@ -17,13 +17,16 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
-from numba import njit
+from numba import njit, prange
 
 from gasim.config import SimulationSettings
 from gasim.geometry.kernels import first_hit, kernel_arrays
 from gasim.geometry.room import Room
 
 ENERGY_THRESHOLD = 1e-7  # tracing stops when a ray (air absorption included) is 70 dB below its start
+# Rays are split into this many chunks, each with its own histogram, traced in parallel and summed in a
+# fixed order: results do not depend on the number of threads. Memory: CHUNKS x R x B x K x 8 bytes.
+CHUNKS = 32
 
 # splitmix64: a small counter-based generator, so every ray has its own reproducible stream
 _GOLDEN = np.uint64(0x9E3779B97F4A7C15)
@@ -83,17 +86,17 @@ def _deposit(histogram, receiver, k, energy, factor, path, attenuation):
 
 
 @njit(cache=True)
-def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_polygon, poly_normal, poly_material,
-           absorption, diffuse_probability, attenuation, speed, time_step, n_bins, max_length, exclude_order):
+def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_polygon,
+                 poly_normal, poly_material, absorption, diffuse_probability, attenuation, speed, time_step,
+                 max_length, exclude_order, histogram, absorbed, remaining, escaped, counters):
     """
-    Trace one group of bands that share their scattering coefficients
+    Trace rays first .. last - 1 of one group of bands that share their scattering coefficients
     :param diffuse_probability: (M,) scattering coefficient of each material in this group of bands
+    :param histogram: (R, B, K) output, added to
+    :param absorbed, remaining, escaped: (B,) energy outputs, added to
+    :param counters: (2,) output: escaped rays, wall hits
     """
-    n_receivers, n_bands = receivers.shape[0], absorption.shape[1]
-    histogram = np.zeros((n_receivers, n_bands, n_bins))
-    absorbed = np.zeros(n_bands)
-    remaining = np.zeros(n_bands)
-    escaped = np.zeros(n_bands)
+    n_receivers, n_bands, n_bins = histogram.shape
     escaped_rays = 0
     reflections = 0
     inv_area = 1.0 / (math.pi * radius * radius)
@@ -101,7 +104,7 @@ def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_poly
     energy = np.empty(n_bands)
     base = _mix(np.uint64(seed) + _GOLDEN * np.uint64(stream + 1))
 
-    for ray in range(n_rays):
+    for ray in range(first, last):
         state = _mix(base + np.uint64(ray) * _GOLDEN)
         state, u1 = _uniform(state)
         state, u2 = _uniform(state)
@@ -189,7 +192,27 @@ def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_poly
                 remaining += energy
                 break
 
-    return histogram, absorbed, remaining, escaped, escaped_rays, reflections
+    counters[0] += escaped_rays
+    counters[1] += reflections
+
+
+@njit(cache=True, parallel=True)
+def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_polygon, poly_normal, poly_material,
+           absorption, diffuse_probability, attenuation, speed, time_step, n_bins, max_length, exclude_order):
+    """
+    Trace all rays of one group of bands in CHUNKS parallel chunks
+    :return: Per-chunk histograms (C, R, B, K), energies (C, 3, B) and counters (C, 2)
+    """
+    n_bands = absorption.shape[1]
+    histograms = np.zeros((CHUNKS, receivers.shape[0], n_bands, n_bins))
+    energies = np.zeros((CHUNKS, 3, n_bands))
+    counters = np.zeros((CHUNKS, 2), np.int64)
+    for chunk in prange(CHUNKS):
+        _trace_range(chunk * n_rays // CHUNKS, (chunk + 1) * n_rays // CHUNKS, n_rays, seed, stream, source,
+                     receivers, radius, v0, e1, e2, tri_polygon, poly_normal, poly_material, absorption,
+                     diffuse_probability, attenuation, speed, time_step, max_length, exclude_order,
+                     histograms[chunk], energies[chunk, 0], energies[chunk, 1], energies[chunk, 2], counters[chunk])
+    return histograms, energies, counters
 
 
 @dataclass(frozen=True)
@@ -246,7 +269,10 @@ def trace_rays(room: Room, settings: SimulationSettings, speed_of_sound: float, 
             np.ascontiguousarray(absorption[:, bands]), np.ascontiguousarray(scattering[:, bands[0]]),
             np.ascontiguousarray(attenuation[bands]), float(speed_of_sound), float(settings.time_step), n_bins,
             float(settings.max_time * speed_of_sound), int(exclude_specular_order))
-        histogram[:, bands], absorbed[bands], remaining[bands], escaped[bands] = result[:4]
-        escaped_rays += int(result[4])
-        reflections += int(result[5])
+        histograms, energies, counters = result
+        # Sum the chunks in a fixed order, so the result does not depend on the thread count
+        histogram[:, bands] = histograms.sum(axis=0)
+        absorbed[bands], remaining[bands], escaped[bands] = energies.sum(axis=0)
+        escaped_rays += int(counters[:, 0].sum())
+        reflections += int(counters[:, 1].sum())
     return RayTracing(histogram, absorbed, remaining, escaped, escaped_rays, reflections, len(groups))
