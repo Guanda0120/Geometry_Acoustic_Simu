@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). So far it reads and checks room models (`gasim check`); simulations still run on the engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), whose propagation physics has known errors (see below). Do not use its results for design decisions.
+> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). So far it reads and checks room models (`gasim check`) and evaluates decay curves (ISO 3382); simulations still run on the engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), whose propagation physics has known errors (see below). Do not use its results for design decisions.
 
 ## Layout
 
@@ -15,8 +15,8 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 │   ├── materials.py     absorption and scattering per octave band
 │   ├── air.py           speed of sound, ISO 9613-1 air absorption
 │   ├── geometry/        Room arrays, triangulation, inward normals, model checks
-│   ├── io/rhino.py      .3dm reader
-│   ├── analysis/        Sabine / Eyring
+│   ├── io/              .3dm reader, result files (.npz)
+│   ├── analysis/        Schroeder curves, EDT/T20/T30 (ISO 3382), Sabine/Eyring
 │   └── legacy/          thesis-2023 engine, physics unchanged
 ├── configs/             TOML configs of the rooms
 │   └── legacy/          run settings of the thesis engine (rooms and sweeps)

@@ -148,7 +148,9 @@ E_rain = e · (1 − α) · s · (1 − cos γ) · 2 cos θ · exp(−m·L) / (�
 ### 4.5 Decay analysis
 
 - Schroeder backward integration of each band histogram.
-- EDT (0 to −10 dB), T20 (−5 to −25 dB), T30 (−5 to −35 dB) by least-squares fit, as in ISO 3382-1/-2; the fit range and the available dynamic range are stored with the result.
+- EDT (0 to −10 dB), T20 (−5 to −25 dB), T30 (−5 to −35 dB) by least-squares fit, as in ISO 3382-1/-2, from the first bin with energy.
+- A parameter is only reported when the fitted decay reaches 15 dB below its evaluation range by the end of the response (EDT 25 dB, T20 40 dB, T30 50 dB); otherwise it is NaN with the reason. 15 dB keeps the truncation bias of T30 below 0.3 % (10 dB: 0.85 %).
+- Non-linearity ξ = 1000(1 − r²) and curvature C = 100(T30/T20 − 1) flag double-slope decays (ISO 3382-2 Annex B).
 - Sabine and Eyring (both with 4mV air term) as references.
 
 ### 4.6 Performance design
