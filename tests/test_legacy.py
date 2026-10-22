@@ -38,6 +38,6 @@ def test_small_run_writes_results(tmp_path):
     assert (tmp_path / 'rec_0_res.wav').exists()
 
 
-def test_cli_rejects_unknown_engine():
-    with pytest.raises(SystemExit):
-        main(['run', TEST_ROOM, '--engine', 'unknown'])
+def test_cli_rejects_unknown_config_type():
+    with pytest.raises(SystemExit, match='expected a .toml config'):
+        main(['run', 'models/Simple_Test.3dm'])

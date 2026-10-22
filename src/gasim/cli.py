@@ -4,12 +4,54 @@ import argparse
 
 def _run(args: argparse.Namespace):
     """
-    Run a simulation from a config file
-    :param args: Parsed arguments with config and engine
+    Run a simulation: TOML configs with the new engine, Python configs with the thesis engine
+    :param args: Parsed arguments with config and output
     """
-    from gasim.legacy.simulation import load_config, simulation
+    from pathlib import Path
 
-    simulation(load_config(args.config))
+    config_path = Path(args.config)
+    if config_path.suffix == '.py':
+        from gasim.legacy.simulation import load_config, simulation
+        simulation(load_config(config_path))
+        return 0
+    if config_path.suffix != '.toml':
+        raise SystemExit(f"{config_path}: expected a .toml config (new engine) or a .py config (thesis engine)")
+
+    import numpy as np
+
+    from gasim.analysis.statistical import eyring
+    from gasim.bands import OCTAVE_BANDS
+    from gasim.config import load_config
+    from gasim.geometry import load_room
+    from gasim.io.results import save_result
+    from gasim.simulate import simulate
+
+    config = load_config(config_path)
+    result = simulate(config)
+    output = Path(args.output) if args.output else Path('output') / config_path.stem / 'result.npz'
+    save_result(result, output)
+
+    meta = result.metadata
+    parameters = result.decay()
+    room, _ = load_room(config)
+    reference = eyring(room, meta['speed_of_sound'], np.array(meta['air_attenuation']))
+
+    def row(label, values):
+        return f"{label:<12}" + ''.join(f'{v:>8.2f}' for v in values)
+
+    print(f"Room        {config.model}: {meta['volume']:.1f} m3, {len(result.receivers)} receivers")
+    print(f"Rays        {meta['rays']} ({meta['escaped_rays']} escaped), {meta['timings']['rays']:.1f} s")
+    print()
+    print(f"{'Band (Hz)':<12}" + ''.join(f'{band:>8.0f}' for band in OCTAVE_BANDS))
+    print(row('EDT (s)', np.nanmean(parameters.edt, axis=0)))
+    print(row('T20 (s)', np.nanmean(parameters.t20, axis=0)))
+    print(row('T30 (s)', np.nanmean(parameters.t30, axis=0)))
+    print(row('Eyring (s)', reference))
+    print('T30 per receiver')
+    for index, values in enumerate(parameters.t30):
+        print(row(f'  R{index + 1}', values))
+    print(f"Saved       {output}")
+    return 0
 
 
 def _eyring(args: argparse.Namespace):
@@ -100,9 +142,9 @@ def build_parser():
     sub = parser.add_subparsers(dest='command', required=True)
 
     run = sub.add_parser('run', help='run a simulation from a config file')
-    run.add_argument('config', help='config file, e.g. configs/legacy/test_room.py')
-    run.add_argument('--engine', choices=['legacy'], default='legacy',
-                     help='propagation engine (only the thesis-2023 engine for now)')
+    run.add_argument('config', help='TOML config (new engine), e.g. configs/test_room.toml, '
+                                    'or Python config (thesis engine), e.g. configs/legacy/test_room.py')
+    run.add_argument('--output', help='result file of the new engine, default output/<config name>/result.npz')
     run.set_defaults(func=_run)
 
     chk = sub.add_parser('check', help='check the room model of a TOML config, print Sabine/Eyring')
