@@ -25,6 +25,7 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 ├── models/              Rhino models of the synthetic test rooms
 │   └── private/         real buildings, git-ignored
 ├── tests/               pytest
+├── experiments/         scripts behind the paper's figures (need data outside the repo)
 ├── docs/                design notes (rewrite plan)
 └── references/          key literature (see references/README.md)
 ```
@@ -62,6 +63,14 @@ Write the image-source paths of a receiver to Rhino, one layer per reflection or
 ```bash
 uv run gasim paths output/test_room/result.npz paths.3dm --receiver 1 --max-order 2
 ```
+
+Experiments for the paper live in `experiments/`. They need the private models and the measured data kept outside the repository (`../data`, see its README):
+
+```bash
+uv run python experiments/validation_rooms.py --seeds 5   # three rooms vs measurement and thesis engine, about 4 min
+```
+
+Results go to `output/experiments/validation/` (summary and per-receiver CSV, figure).
 
 Thesis engine (Python configs): `uv run gasim run configs/legacy/test_room.py` writes decay plots, impulse responses (`.wav`) and pickled receivers to the config's `output_folder`; `gasim eyring` and `gasim export-paths` work on its configs and pickles.
 
