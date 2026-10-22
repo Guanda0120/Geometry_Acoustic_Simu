@@ -2,18 +2,21 @@
 Simulation results: energy histograms per receiver and band, saved as one .npz file.
 
 The file holds plain arrays and a JSON metadata string (config, seed, version, timings), so it can be
-read back without pickle and traced to the run that produced it.
+read back without pickle and traced to the run that produced it. Since format 2 it can also hold the
+image-source paths, for export to Rhino.
 """
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 import numpy as np
 
 from gasim import __version__
 from gasim.analysis.decay import decay_parameters
+from gasim.propagation.image_sources import ImageSourcePaths
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
+READABLE_VERSIONS = (1, 2)
 _ARRAYS = ('energy', 'bands', 'source', 'receivers')
 
 
@@ -32,6 +35,7 @@ class Result:
     source: np.ndarray  # (3,)
     receivers: np.ndarray  # (R, 3)
     metadata: dict = field(default_factory=dict)
+    paths: ImageSourcePaths = None  # image-source paths, if the run had them
 
     def __post_init__(self):
         n_receivers, n_bands, _ = self.energy.shape
@@ -77,8 +81,11 @@ def save_result(result: Result, path):
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    arrays = {name: getattr(result, name) for name in _ARRAYS}
+    if result.paths is not None:
+        arrays.update({f'path_{f.name}': getattr(result.paths, f.name) for f in fields(ImageSourcePaths)})
     np.savez_compressed(path, format_version=FORMAT_VERSION, time_step=result.time_step,
-                        metadata=json.dumps(result.metadata), **{name: getattr(result, name) for name in _ARRAYS})
+                        metadata=json.dumps(result.metadata), **arrays)
 
 
 def load_result(path):
@@ -89,7 +96,10 @@ def load_result(path):
     """
     with np.load(path, allow_pickle=False) as data:
         version = int(data['format_version'])
-        if version != FORMAT_VERSION:
-            raise ValueError(f"{path}: result format {version}, this gasim reads format {FORMAT_VERSION}")
-        return Result(time_step=float(data['time_step']), metadata=json.loads(str(data['metadata'])),
+        if version not in READABLE_VERSIONS:
+            raise ValueError(f"{path}: result format {version}, this gasim reads formats {READABLE_VERSIONS}")
+        paths = None
+        if 'path_order' in data:
+            paths = ImageSourcePaths(**{f.name: data[f'path_{f.name}'] for f in fields(ImageSourcePaths)})
+        return Result(time_step=float(data['time_step']), metadata=json.loads(str(data['metadata'])), paths=paths,
                       **{name: data[name] for name in _ARRAYS})

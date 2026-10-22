@@ -6,14 +6,14 @@ from gasim.bands import OCTAVE_BANDS
 from gasim.config import Config
 from gasim.geometry import load_room
 from gasim.io.results import Result, run_metadata
-from gasim.propagation.rays import trace_rays
+from gasim.propagation.hybrid import hybrid
 
 
 def simulate(config: Config):
     """
-    Run the new engine on a config (ray tracing with diffuse rain; image sources follow in PR 7)
+    Run the new engine on a config: image sources up to ism_order plus rays with diffuse rain
     :param config: Config
-    :return: Result with energy histograms and metadata of the run
+    :return: Result with energy histograms, image-source paths and metadata of the run
     """
     timings = {}
     start = time.perf_counter()
@@ -25,13 +25,16 @@ def simulate(config: Config):
     m = energy_attenuation(air.temperature, air.humidity, air.pressure)
 
     start = time.perf_counter()
-    rays = trace_rays(room, config.simulation, c, m)
-    timings['rays'] = time.perf_counter() - start
+    output = hybrid(room, config.simulation, c, m)
+    timings['simulation'] = time.perf_counter() - start
 
-    metadata = run_metadata(config.path, seed=config.simulation.seed, timings=timings, engine='rays',
-                            rays=config.simulation.rays, receiver_radius=config.simulation.receiver_radius,
+    rays = output.rays
+    metadata = run_metadata(config.path, seed=config.simulation.seed, timings=timings, engine='hybrid',
+                            rays=config.simulation.rays, ism_order=config.simulation.ism_order,
+                            image_sources=[output.paths.counts(r).tolist() for r in range(len(room.receivers))],
+                            receiver_radius=config.simulation.receiver_radius,
                             escaped_rays=rays.escaped_rays, reflections=rays.reflections,
                             speed_of_sound=c, air_attenuation=m.tolist(), volume=room.volume,
-                            surface_area=room.surface_area)
-    return Result(energy=rays.energy, time_step=config.simulation.time_step, bands=OCTAVE_BANDS.copy(),
-                  source=room.source, receivers=room.receivers, metadata=metadata)
+                            surface_area=room.surface_area, layers=list(room.poly_layer))
+    return Result(energy=output.energy, time_step=config.simulation.time_step, bands=OCTAVE_BANDS.copy(),
+                  source=room.source, receivers=room.receivers, metadata=metadata, paths=output.paths)

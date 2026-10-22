@@ -40,7 +40,9 @@ def _run(args: argparse.Namespace):
         return f"{label:<12}" + ''.join(f'{v:>8.2f}' for v in values)
 
     print(f"Room        {config.model}: {meta['volume']:.1f} m3, {len(result.receivers)} receivers")
-    print(f"Rays        {meta['rays']} ({meta['escaped_rays']} escaped), {meta['timings']['rays']:.1f} s")
+    print(f"Rays        {meta['rays']} ({meta['escaped_rays']} escaped); image sources up to order "
+          f"{meta['ism_order']}: {' / '.join(map(str, meta['image_sources'][0]))} paths at R1 (by order); "
+          f"{meta['timings']['simulation']:.1f} s")
     print()
     print(f"{'Band (Hz)':<12}" + ''.join(f'{band:>8.0f}' for band in OCTAVE_BANDS))
     print(row('EDT (s)', np.nanmean(parameters.edt, axis=0)))
@@ -121,6 +123,23 @@ def _check(args: argparse.Namespace):
     return 0 if report.ok else 1
 
 
+def _paths(args: argparse.Namespace):
+    """
+    Write the image-source paths of a result to a Rhino file
+    :param args: Parsed arguments with result, output, receiver and max_order
+    """
+    from gasim.io.results import load_result
+    from gasim.io.rhino import write_paths
+
+    result = load_result(args.result)
+    if result.paths is None:
+        raise SystemExit(f"{args.result} holds no image-source paths")
+    count = write_paths(result.paths, args.output, receiver=args.receiver - 1, max_order=args.max_order,
+                        layers=result.metadata.get('layers'))
+    print(f"Wrote {count} paths of receiver {args.receiver} to {args.output}")
+    return 0
+
+
 def _export_paths(args: argparse.Namespace):
     """
     Write the image-source or stochastic paths of a saved receiver to a Rhino file
@@ -156,7 +175,14 @@ def build_parser():
     eyr.add_argument('--volume', type=float, required=True, help='room volume in m3')
     eyr.set_defaults(func=_eyring)
 
-    exp = sub.add_parser('export-paths', help='write saved ray paths to a .3dm file')
+    pth = sub.add_parser('paths', help='write the image-source paths of a result to a .3dm file')
+    pth.add_argument('result', help='result of gasim run, e.g. output/test_room/result.npz')
+    pth.add_argument('output', help='.3dm file to write')
+    pth.add_argument('--receiver', type=int, default=1, help='receiver number, 1 = first (default)')
+    pth.add_argument('--max-order', type=int, help='highest reflection order to write')
+    pth.set_defaults(func=_paths)
+
+    exp = sub.add_parser('export-paths', help='write paths saved by the thesis engine (.pkl) to a .3dm file')
     exp.add_argument('kind', choices=['image', 'stochastic'])
     exp.add_argument('pkl', help='saved receiver, e.g. output/test_room/rec_0.pkl')
     exp.add_argument('output', help='.3dm file to write')

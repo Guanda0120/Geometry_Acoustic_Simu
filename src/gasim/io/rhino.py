@@ -98,3 +98,38 @@ def read_3dm(path):
                       source=np.array(sources[0]) * scale,
                       receivers=np.array(receivers) * scale,
                       skipped=skipped)
+
+
+def write_paths(paths, path, receiver: int = 0, max_order=None, layers=None):
+    """
+    Write image-source paths of one receiver as polylines, one layer per reflection order
+    :param paths: ImageSourcePaths
+    :param path: .3dm file to write
+    :param receiver: Receiver index
+    :param max_order: Highest order to write, default all
+    :param layers: Polygon layer names; if given, each curve is named after the surfaces it reflects from
+    :return: Number of paths written
+    """
+    model = rhino3dm.File3dm()
+    model.Settings.ModelUnitSystem = rhino3dm.UnitSystem.Meters
+    selected = np.flatnonzero((paths.receiver == receiver)
+                              & (paths.order <= (paths.order.max(initial=0) if max_order is None else max_order)))
+    layer_of_order = {}
+    for index in selected:
+        order = int(paths.order[index])
+        if order not in layer_of_order:
+            name = 'Direct' if order == 0 else f'Order {order}'
+            layer_of_order[order] = model.Layers.AddLayer(name, _ORDER_COLOURS[min(order, len(_ORDER_COLOURS) - 1)])
+        attributes = rhino3dm.ObjectAttributes()
+        attributes.LayerIndex = layer_of_order[order]
+        if layers is not None:
+            attributes.Name = ' > '.join(layers[p] for p in paths.planes[index, :order]) or 'direct'
+        points = [rhino3dm.Point3d(*point) for point in paths.points[index, :order + 2]]
+        model.Objects.AddCurve(rhino3dm.PolylineCurve(points), attributes)
+    if not model.Write(str(path), 7):
+        raise OSError(f"Cannot write {path}")
+    return len(selected)
+
+
+_ORDER_COLOURS = [(0, 0, 0, 255), (220, 40, 40, 255), (240, 150, 20, 255), (40, 150, 60, 255),
+                  (30, 100, 220, 255), (140, 60, 200, 255)]
