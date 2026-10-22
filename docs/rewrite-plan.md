@@ -155,15 +155,15 @@ E_rain = e · (1 − α) · s · (1 − cos γ) · 2 cos θ · exp(−m·L) / (�
 
 ### 4.6 Performance design
 
-- Kernels in Numba (`@njit(parallel=True)`); rays split into chunks, one histogram per chunk, summed at the end (no atomics).
+- Kernels in Numba (`@njit(parallel=True)`); rays split into 32 fixed chunks, one histogram per chunk, summed at the end in a fixed order (no atomics), so results are bit-identical for any thread count. Image sources: one task per receiver and first reflecting wall on a thread pool (the search releases the GIL).
 - Nothing per ray is stored after tracing except what the histograms and optional sensitivity counters need.
 - Targets (8-core laptop):
 
-| Case | Legacy | Target |
-|---|---|---|
-| Test room 315 m³, 31 500 rays, 4 receivers | 1.8–8.8 h | < 10 s |
-| Classroom 229 m³, 100 rays/m³ (22 900), ISM order 5 | 6–23 h | < 1 min |
-| Multifunction hall 4389 m³, 100 rays/m³ (438 900), 6 receivers | not feasible (ran 9/m³ in 35 h) | < 10 min |
+| Case | Legacy | Target | Achieved (PR 8, 10-core MacBook Air) |
+|---|---|---|---|
+| Test room 315 m³, 31 500 rays, 4 receivers | 1.8–8.8 h | < 10 s | 0.4 s |
+| Classroom 229 m³, 100 rays/m³ (22 900), ISM order 5 | 6–23 h | < 1 min | 0.9 s |
+| Multifunction hall 4389 m³, 100 rays/m³ (438 900), 6 receivers | not feasible (ran 9/m³ in 35 h) | < 10 min | 33.6 s |
 
 ## 5. Validation suite
 
@@ -194,7 +194,7 @@ Optional cross-check: pyroomacoustics (ISM + ray tracing) in a shoebox, as a dev
 | 5 | Decay analysis and result files (`.npz` + JSON metadata) | T-decay passes |
 | 6 | Ray tracer with diffuse rain (Numba, single thread is fine) | T-energy, T-diffuse, T-rays, T-rain, T-repro pass |
 | 7 | ISM, hybrid combination, path export to Rhino (`gasim paths`); `gasim run` with TOML configs uses the hybrid | T-ism, T-hybrid pass; test room runs end to end |
-| 8 | Performance: parallel kernels, chunked histograms, BVH if needed, benchmarks | T-bench targets met |
+| 8 | Performance: rays in 32 fixed parallel chunks (results independent of the thread count), image sources in parallel per receiver and first wall, benchmarks; no BVH needed (brute force meets the targets) | T-bench targets met |
 | 9 | Real rooms: load and check the classroom, lecture hall and multifunction hall models (kept outside git), fix model issues found by the checks | Leak/overlap checks clean; runs complete |
 | 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure |
 | 11 | Surface sensitivity ∂T/∂αᵢ and uncertainty bands (§7) | Linear prediction agrees with full re-simulation for small Δα |

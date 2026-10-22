@@ -7,8 +7,10 @@ receiver, every reflection point lies inside its polygon and no segment is block
 Its energy is prod (1 - alpha_i)(1 - s_i) exp(-m d) / (4 pi d2): the specular share only, because the
 rays carry every path that scatters at least once (docs/rewrite-plan.md, Sect. 4.4).
 """
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
+import numba
 import numpy as np
 from numba import njit
 
@@ -51,11 +53,14 @@ def _path_is_valid(level, sequence, images, receiver, source, poly_normal, poly_
     return not segment_blocked(ax, ay, az, source[0], source[1], source[2], v0, e1, e2)
 
 
-@njit(cache=True)
-def _find_paths(max_order, source, receiver, poly_normal, poly_d, tri_first, tri_count, v0, e1, e2, capacity):
+@njit(cache=True, nogil=True)
+def _find_paths(max_order, source, receiver, poly_normal, poly_d, tri_first, tri_count, v0, e1, e2, capacity,
+                first_plane, with_direct):
     """
     Depth-first search over plane sequences up to max_order
-    :return: orders, planes, points, lengths of the valid paths, and whether capacity was exceeded
+    :param first_plane: Only sequences starting with this plane (-1: all), so subtrees can run in parallel
+    :param with_direct: Also test the direct sound
+    :return: orders, planes, points of the valid paths, their number, and whether capacity was exceeded
     """
     width = max(max_order, 1)
     orders = np.zeros(capacity, np.int64)
@@ -65,7 +70,8 @@ def _find_paths(max_order, source, receiver, poly_normal, poly_d, tri_first, tri
     reflection = np.empty((width, 3))
 
     # Direct sound
-    if not segment_blocked(source[0], source[1], source[2], receiver[0], receiver[1], receiver[2], v0, e1, e2):
+    if with_direct and not segment_blocked(source[0], source[1], source[2], receiver[0], receiver[1], receiver[2],
+                                           v0, e1, e2):
         points[0, 0] = source
         points[0, 1] = receiver
         count = 1
@@ -79,6 +85,10 @@ def _find_paths(max_order, source, receiver, poly_normal, poly_d, tri_first, tri
     while 1 <= level <= max_order:
         choice[level] += 1
         p = choice[level]
+        if level == 1 and first_plane >= 0:
+            if p > first_plane:
+                break
+            p = choice[1] = first_plane
         if p >= n_planes:
             choice[level] = -1
             level -= 1
@@ -143,20 +153,24 @@ def find_image_sources(room: Room, max_order: int, air_attenuation):
     if np.any(np.diff(room.tri_polygon) < 0):
         raise ValueError("Triangles must be grouped by polygon")
 
-    columns = {'receiver': [], 'order': [], 'planes': [], 'points': []}
-    for index, receiver in enumerate(room.receivers):
-        capacity = 4096
+    def search(task):
+        index, first_plane = task
+        capacity = 1024
         while True:
             orders, planes, points, count, overflow = _find_paths(
-                max_order, room.source.astype(float), receiver.astype(float), np.ascontiguousarray(room.poly_normal),
-                room.poly_d.astype(float), tri_first, tri_count, v0, e1, e2, capacity)
+                max_order, room.source.astype(float), room.receivers[index].astype(float),
+                np.ascontiguousarray(room.poly_normal), room.poly_d.astype(float), tri_first, tri_count, v0, e1, e2,
+                capacity, first_plane, first_plane <= 0)
             if not overflow:
-                break
+                return np.full(count, index), orders[:count], planes[:count, :max_order], points[:count]
             capacity *= 4
-        columns['receiver'].append(np.full(count, index))
-        columns['order'].append(orders[:count])
-        columns['planes'].append(planes[:count, :max_order])
-        columns['points'].append(points[:count])
+
+    # One task per receiver and first reflecting plane; the GIL is released inside the search
+    first_planes = range(n_polygons) if max_order > 0 else [-1]
+    tasks = [(index, plane) for index in range(len(room.receivers)) for plane in first_planes]
+    with ThreadPoolExecutor(max_workers=numba.get_num_threads()) as pool:
+        found = list(pool.map(search, tasks))
+    columns = {name: [f[i] for f in found] for i, name in enumerate(('receiver', 'order', 'planes', 'points'))}
     receiver, order = np.concatenate(columns['receiver']), np.concatenate(columns['order'])
     planes, points = np.concatenate(columns['planes']), np.concatenate(columns['points'])
     length = np.array([np.linalg.norm(np.diff(p[:o + 2], axis=0), axis=1).sum() for p, o in zip(points, order)])

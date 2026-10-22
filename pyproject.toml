@@ -32,6 +32,8 @@ packages = ["src/gasim"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: benchmarks against the performance targets of docs/rewrite-plan.md (run with -m slow)"]
+addopts = "-m 'not slow'"
 
 [tool.ruff]
 line-length = 120

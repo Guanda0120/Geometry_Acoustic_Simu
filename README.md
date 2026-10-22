@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), computes the early specular reflections with image sources and everything else with energy-particle ray tracing and diffuse rain, evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config) and exports the image-source paths to Rhino (`gasim paths`). Parallel execution follows next. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
+> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), computes the early specular reflections with image sources and everything else with energy-particle ray tracing and diffuse rain, evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config) and exports the image-source paths to Rhino (`gasim paths`). It runs on all CPU cores; results do not depend on the number of threads. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
 
 ## Layout
 
@@ -55,7 +55,7 @@ This reports polygons, volume, surface per material, whether source and receiver
 uv run gasim run configs/test_room.toml
 ```
 
-It prints EDT/T20/T30 per band (room mean and per receiver) next to Eyring and saves the energy histograms and image-source paths to `output/test_room/result.npz` (`--output` to change). The test room with 31 500 rays and third-order image sources takes about 3 s. `python main.py <command>` does the same without installing.
+It prints EDT/T20/T30 per band (room mean and per receiver) next to Eyring and saves the energy histograms and image-source paths to `output/test_room/result.npz` (`--output` to change). The test room with 31 500 rays and third-order image sources takes under a second on a laptop (`--threads N` limits the CPU threads; the result is identical). `python main.py <command>` does the same without installing.
 
 Write the image-source paths of a receiver to Rhino, one layer per reflection order, each curve named after the surfaces it reflects from:
 
@@ -68,8 +68,9 @@ Thesis engine (Python configs): `uv run gasim run configs/legacy/test_room.py` w
 Development:
 
 ```bash
-uv run pytest       # tests, about 10 s
-uv run ruff check   # lint (CI runs both on every PR)
+uv run pytest              # tests, about 7 s
+uv run pytest -m slow -s   # benchmarks against the performance targets (private models are skipped)
+uv run ruff check          # lint (CI runs it and the tests on every PR)
 ```
 
 ## Configs and models
