@@ -193,7 +193,7 @@ Optional cross-check: pyroomacoustics (ISM + ray tracing) in a shoebox, as a dev
 | 4 | Config (TOML) + material library, Rhino import into `Room`, triangulation, inward normals, volume, leak/overlap checks, ISO 9613-1, Sabine/Eyring; TOML versions of the bundled configs | T-geometry, T-air, T-materials pass; all four bundled models load cleanly |
 | 5 | Decay analysis and result files (`.npz` + JSON metadata) | T-decay passes |
 | 6 | Ray tracer with diffuse rain (Numba, single thread is fine) | T-energy, T-diffuse, T-rays, T-rain, T-repro pass |
-| 7 | ISM, hybrid combination, path export to Rhino (`gasim run` with TOML configs already uses the new engine since PR 6) | T-ism, T-hybrid pass; test room runs end to end |
+| 7 | ISM, hybrid combination, path export to Rhino (`gasim paths`); `gasim run` with TOML configs uses the hybrid | T-ism, T-hybrid pass; test room runs end to end |
 | 8 | Performance: parallel kernels, chunked histograms, BVH if needed, benchmarks | T-bench targets met |
 | 9 | Real rooms: load and check the classroom, lecture hall and multifunction hall models (kept outside git), fix model issues found by the checks | Leak/overlap checks clean; runs complete |
 | 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure |

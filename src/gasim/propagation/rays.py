@@ -20,10 +20,10 @@ import numpy as np
 from numba import njit
 
 from gasim.config import SimulationSettings
+from gasim.geometry.kernels import first_hit, kernel_arrays
 from gasim.geometry.room import Room
 
 ENERGY_THRESHOLD = 1e-7  # tracing stops when a ray (air absorption included) is 70 dB below its start
-EPSILON = 1e-7  # m, hits closer than this to the ray start are ignored (self-intersection)
 
 # splitmix64: a small counter-based generator, so every ray has its own reproducible stream
 _GOLDEN = np.uint64(0x9E3779B97F4A7C15)
@@ -47,39 +47,6 @@ def _uniform(state):
     """
     state = state + _GOLDEN
     return state, (_mix(state) >> _SHIFT_11) * _UNIT
-
-
-@njit(cache=True)
-def _first_hit(ox, oy, oz, dx, dy, dz, v0, e1, e2):
-    """
-    Nearest triangle along a ray (Moeller-Trumbore, two-sided)
-    :return: Distance, triangle index (-1 if none)
-    """
-    best_t = np.inf
-    best = -1
-    for k in range(v0.shape[0]):
-        px = dy * e2[k, 2] - dz * e2[k, 1]
-        py = dz * e2[k, 0] - dx * e2[k, 2]
-        pz = dx * e2[k, 1] - dy * e2[k, 0]
-        det = e1[k, 0] * px + e1[k, 1] * py + e1[k, 2] * pz
-        if abs(det) < 1e-14:
-            continue
-        inv = 1.0 / det
-        sx, sy, sz = ox - v0[k, 0], oy - v0[k, 1], oz - v0[k, 2]
-        u = (sx * px + sy * py + sz * pz) * inv
-        if u < 0.0 or u > 1.0:
-            continue
-        qx = sy * e1[k, 2] - sz * e1[k, 1]
-        qy = sz * e1[k, 0] - sx * e1[k, 2]
-        qz = sx * e1[k, 1] - sy * e1[k, 0]
-        v = (dx * qx + dy * qy + dz * qz) * inv
-        if v < 0.0 or u + v > 1.0:
-            continue
-        t = (e2[k, 0] * qx + e2[k, 1] * qy + e2[k, 2] * qz) * inv
-        if EPSILON < t < best_t:
-            best_t = t
-            best = k
-    return best_t, best
 
 
 @njit(cache=True)
@@ -149,7 +116,7 @@ def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_poly
         after_diffuse = False
 
         while True:
-            t_hit, tri = _first_hit(ox, oy, oz, dx, dy, dz, v0, e1, e2)
+            t_hit, tri = first_hit(ox, oy, oz, dx, dy, dz, v0, e1, e2)
             if tri < 0:
                 escaped_rays += 1
                 escaped += energy
@@ -187,7 +154,7 @@ def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_poly
                 cos_theta = (nx * vx + ny * vy + nz * vz) / distance
                 if cos_theta <= 0.0:
                     continue
-                t_block, _ = _first_hit(ox, oy, oz, vx / distance, vy / distance, vz / distance, v0, e1, e2)
+                t_block, _ = first_hit(ox, oy, oz, vx / distance, vy / distance, vz / distance, v0, e1, e2)
                 if t_block < distance:
                     continue
                 cos_gamma = math.sqrt(1.0 - (radius / distance) ** 2)
@@ -261,10 +228,7 @@ def trace_rays(room: Room, settings: SimulationSettings, speed_of_sound: float, 
                                    recorded, because the image sources hold them; -1 records everything
     :return: RayTracing
     """
-    triangles = room.tri_vertices
-    v0 = np.ascontiguousarray(triangles[:, 0])
-    e1 = np.ascontiguousarray(triangles[:, 1] - triangles[:, 0])
-    e2 = np.ascontiguousarray(triangles[:, 2] - triangles[:, 0])
+    v0, e1, e2 = kernel_arrays(room)
     n_bins = math.ceil(settings.max_time / settings.time_step)
     absorption, scattering = room.materials.absorption, room.materials.scattering
     attenuation = np.asarray(air_attenuation, dtype=float)

@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), traces energy particles with diffuse rain and evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config); image sources for the early reflections follow next. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
+> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), computes the early specular reflections with image sources and everything else with energy-particle ray tracing and diffuse rain, evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config) and exports the image-source paths to Rhino (`gasim paths`). Parallel execution follows next. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
 
 ## Layout
 
@@ -10,13 +10,13 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 ├── main.py              run from a source checkout: python main.py <command>
 ├── pyproject.toml       package metadata and dependencies (uv)
 ├── src/gasim/
-│   ├── cli.py           command line interface (gasim check / run / eyring / export-paths)
+│   ├── cli.py           command line interface (gasim check / run / paths; eyring / export-paths for the thesis engine)
 │   ├── config.py        TOML configs
 │   ├── materials.py     absorption and scattering per octave band
 │   ├── air.py           speed of sound, ISO 9613-1 air absorption
 │   ├── geometry/        Room arrays, triangulation, inward normals, model checks
 │   ├── io/              .3dm reader, result files (.npz)
-│   ├── propagation/     ray tracing with diffuse rain (Numba)
+│   ├── propagation/     image sources, ray tracing with diffuse rain, hybrid (Numba)
 │   ├── simulate.py      config -> Result
 │   ├── analysis/        Schroeder curves, EDT/T20/T30 (ISO 3382), Sabine/Eyring/Kuttruff
 │   └── legacy/          thesis-2023 engine, physics unchanged
@@ -55,17 +55,21 @@ This reports polygons, volume, surface per material, whether source and receiver
 uv run gasim run configs/test_room.toml
 ```
 
-It prints EDT/T20/T30 per band (room mean and per receiver) next to Eyring and saves the energy histograms to `output/test_room/result.npz` (`--output` to change). The test room with 31 500 rays takes about 3 s. A Python config such as `configs/legacy/test_room.py` runs the thesis engine instead.
+It prints EDT/T20/T30 per band (room mean and per receiver) next to Eyring and saves the energy histograms and image-source paths to `output/test_room/result.npz` (`--output` to change). The test room with 31 500 rays and third-order image sources takes about 3 s. `python main.py <command>` does the same without installing.
 
-`python main.py run configs/legacy/test_room.py` does the same without installing. The test room (9 × 7 × 5 m, 315 rays) takes about 30 s. Results go to the `output_folder` set in the config: decay plots, impulse responses (`.wav`) and the pickled receivers.
-
-Other commands:
+Write the image-source paths of a receiver to Rhino, one layer per reflection order, each curve named after the surfaces it reflects from:
 
 ```bash
-uv run gasim eyring configs/legacy/test_room.py --volume 315        # Sabine/Eyring with the legacy materials code
-uv run gasim export-paths image output/test_room/rec_0.pkl paths.3dm  # image-source paths to Rhino
-uv run pytest                                                       # tests, about 5 s
-uv run ruff check                                                   # lint (CI runs both on every PR)
+uv run gasim paths output/test_room/result.npz paths.3dm --receiver 1 --max-order 2
+```
+
+Thesis engine (Python configs): `uv run gasim run configs/legacy/test_room.py` writes decay plots, impulse responses (`.wav`) and pickled receivers to the config's `output_folder`; `gasim eyring` and `gasim export-paths` work on its configs and pickles.
+
+Development:
+
+```bash
+uv run pytest       # tests, about 10 s
+uv run ruff check   # lint (CI runs both on every PR)
 ```
 
 ## Configs and models
