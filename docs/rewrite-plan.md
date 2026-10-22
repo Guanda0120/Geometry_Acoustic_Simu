@@ -69,7 +69,7 @@ src/gasim/
 │   ├── statistical.py   Sabine, Eyring (with air absorption)
 │   └── sensitivity.py   ∂T/∂αᵢ (PR 11)
 ├── simulate.py          one function: config → Result
-├── cli.py               gasim run / eyring / export-paths (+ --engine legacy)
+├── cli.py               gasim check / run / eyring / export-paths (.py configs run the legacy engine)
 └── legacy/              removed in PR 12
 ```
 
@@ -126,7 +126,7 @@ Legacy Python configs stay in `configs/legacy/` until PR 12.
 ### 4.2 Ray tracing (energy particles)
 
 - N rays from an omnidirectional point source, directions uniform on the sphere (seeded), energy 1/N in every band.
-- At each wall hit: energy × (1 − α) per band; continue in the specular direction with probability 1 − s, otherwise in a Lambert (cosine-weighted) direction. With band-dependent s, one direction serves all bands: choose diffuse with a common probability p and reweight band b by s_b/p (diffuse) or (1 − s_b)/(1 − p) (specular), which keeps every band unbiased.
+- At each wall hit: energy × (1 − α) per band; continue in the specular direction with probability 1 − s, otherwise in a Lambert (cosine-weighted) direction. Bands whose scattering coefficients differ are traced as separate groups, each with its own rays. (Reweighting bands by s_b/p or (1 − s_b)/(1 − p) is unbiased, but the weights multiply over hundreds of reflections and degenerate: in PR 6 a band with s = 0 next to one with s = 1 received no energy at all.)
 - Receiver detection: a segment that crosses a receiver sphere of radius r deposits energy · exp(−m·L) / (πr²) at time L/c, L being the path length to the crossing.
 - Termination: energy below −70 dB in all bands (air included) or `max_time`.
 
@@ -173,7 +173,7 @@ E_rain = e · (1 − α) · s · (1 − cos γ) · 2 cos θ · exp(−m·L) / (�
 | T-air | ISO 9613-1 reference values | Within 2 % at 20 °C / 50 % RH, 125 Hz – 4 kHz |
 | T-decay | Synthetic exponential and double-slope decays | T30 within 1 % for single slope; fit range reported |
 | T-energy | Closed box, α = 0, no air | Ray energy constant; absorbed + remaining = emitted for α > 0 |
-| T-diffuse | Box with s = 1 on all walls, uniform α = 0.1 / 0.3 | Mean T30 within 5 % of Eyring over 5 seeds |
+| T-diffuse | Box with s = 1 on all walls, uniform α = 0.1 / 0.3 | T30 within 2 % of Eyring corrected for the free-path spread (Kuttruff Eq. 5.34, γ² from his Table 5.1); plain Eyring is 2–7 % short for such a box |
 | T-rays | Same box, N and 4N rays, 5 seeds each | Mean T30 agrees within the combined standard error (no drift with N) |
 | T-rain | Large single wall, s = 1 | Diffuse rain matches brute-force sphere detection with 10⁷ rays (statistical tolerance) |
 | T-ism | Shoebox, orders ≤ 3 | Image positions, delays and energies equal the Allen–Berkley lattice |
@@ -193,7 +193,7 @@ Optional cross-check: pyroomacoustics (ISM + ray tracing) in a shoebox, as a dev
 | 4 | Config (TOML) + material library, Rhino import into `Room`, triangulation, inward normals, volume, leak/overlap checks, ISO 9613-1, Sabine/Eyring; TOML versions of the bundled configs | T-geometry, T-air, T-materials pass; all four bundled models load cleanly |
 | 5 | Decay analysis and result files (`.npz` + JSON metadata) | T-decay passes |
 | 6 | Ray tracer with diffuse rain (Numba, single thread is fine) | T-energy, T-diffuse, T-rays, T-rain, T-repro pass |
-| 7 | ISM, hybrid combination, path export to Rhino; `gasim run` uses the new engine (legacy behind `--engine legacy`) | T-ism, T-hybrid pass; test room runs end to end |
+| 7 | ISM, hybrid combination, path export to Rhino (`gasim run` with TOML configs already uses the new engine since PR 6) | T-ism, T-hybrid pass; test room runs end to end |
 | 8 | Performance: parallel kernels, chunked histograms, BVH if needed, benchmarks | T-bench targets met |
 | 9 | Real rooms: load and check the classroom, lecture hall and multifunction hall models (kept outside git), fix model issues found by the checks | Leak/overlap checks clean; runs complete |
 | 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure |
@@ -213,7 +213,7 @@ Validation: compare the linear prediction T(α + Δα) ≈ T + ΣᵢΔαᵢ ∂T
 ## 8. Risks
 
 - **Real models may not be watertight** or may contain overlapping coplanar surfaces (see the classroom symptom in §2). The checks of PR 4 will show this; fixing models is PR 9.
-- **Band-dependent scattering**: the reweighting of §4.2 is unbiased but raises the variance when s differs strongly between bands; if T-diffuse/T-rays show this, PR 6 traces such bands separately.
+- **Band-dependent scattering** (resolved in PR 6): bands with different scattering are traced separately, which costs one tracing pass per distinct scattering pattern (at most six).
 - **Low-frequency bias** remains: geometrical acoustics ignores modes and diffraction. The new engine removes the implementation bias; it does not make 125–250 Hz wave-accurate.
 - **Measured data** need checking before the paper (duplicated position rows in the classroom sheet; logs that do not match the reported RT). This is outside the code but blocks PR 10's comparison with measurements.
 

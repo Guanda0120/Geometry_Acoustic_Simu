@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). So far it reads and checks room models (`gasim check`) and evaluates decay curves (ISO 3382); simulations still run on the engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`), whose propagation physics has known errors (see below). Do not use its results for design decisions.
+> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), traces energy particles with diffuse rain and evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config); image sources for the early reflections follow next. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
 
 ## Layout
 
@@ -16,7 +16,9 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 │   ├── air.py           speed of sound, ISO 9613-1 air absorption
 │   ├── geometry/        Room arrays, triangulation, inward normals, model checks
 │   ├── io/              .3dm reader, result files (.npz)
-│   ├── analysis/        Schroeder curves, EDT/T20/T30 (ISO 3382), Sabine/Eyring
+│   ├── propagation/     ray tracing with diffuse rain (Numba)
+│   ├── simulate.py      config -> Result
+│   ├── analysis/        Schroeder curves, EDT/T20/T30 (ISO 3382), Sabine/Eyring/Kuttruff
 │   └── legacy/          thesis-2023 engine, physics unchanged
 ├── configs/             TOML configs of the rooms
 │   └── legacy/          run settings of the thesis engine (rooms and sweeps)
@@ -47,11 +49,13 @@ From the repository root (config paths are relative to it). Check a room model a
 uv run gasim check configs/test_room.toml
 ```
 
-This reports polygons, volume, surface per material, whether source and receivers are inside, rays leaking out of the model and overlapping coplanar surfaces, and exits non-zero if a check fails. Run a simulation with the thesis engine:
+This reports polygons, volume, surface per material, whether source and receivers are inside, rays leaking out of the model and overlapping coplanar surfaces, and exits non-zero if a check fails. Run a simulation:
 
 ```bash
-uv run gasim run configs/legacy/test_room.py
+uv run gasim run configs/test_room.toml
 ```
+
+It prints EDT/T20/T30 per band (room mean and per receiver) next to Eyring and saves the energy histograms to `output/test_room/result.npz` (`--output` to change). The test room with 31 500 rays takes about 3 s. A Python config such as `configs/legacy/test_room.py` runs the thesis engine instead.
 
 `python main.py run configs/legacy/test_room.py` does the same without installing. The test room (9 × 7 × 5 m, 315 rays) takes about 30 s. Results go to the `output_folder` set in the config: decay plots, impulse responses (`.wav`) and the pickled receivers.
 

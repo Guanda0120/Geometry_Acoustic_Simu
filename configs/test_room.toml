@@ -11,7 +11,7 @@ Plaster = { absorption = [0.01, 0.02, 0.05, 0.10, 0.15, 0.20], scattering = 0.10
 Wood    = { absorption = [0.10, 0.20, 0.10, 0.20, 0.30, 0.40], scattering = 0.10 }
 
 [simulation]
-rays = 315
+rays = 31500  # 100 rays per m3
 ism_order = 3
 receiver_radius = 0.2
 time_step = 0.001
