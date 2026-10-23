@@ -8,7 +8,6 @@ Needs the private models in models/private/ and the measured data outside the re
 those of configs/<room>.toml. Writes summary.csv, receivers.csv and validation.png to --output.
 """
 import argparse
-import csv
 import dataclasses
 import math
 import sys
@@ -27,21 +26,10 @@ from gasim.config import load_config
 from gasim.geometry import load_room
 from gasim.simulate import simulate
 
+from _common import BAND_LABELS, cell, read_receiver_table, write_csv
+
 ROOMS = {'classroom': 'Classroom', 'lecture_hall': 'Lecture hall', 'mf_hall': 'Multifunction hall'}
 JND = 5.0  # %, just-noticeable difference of reverberance (ISO 3382-1)
-BAND_LABELS = ['125', '250', '500', '1k', '2k', '4k']
-
-
-def read_table(path: Path):
-    """
-    :param path: CSV with a receiver column and one column per octave band
-    :return: (R, B) array, or None if the file does not exist
-    """
-    if not path.exists():
-        return None
-    with path.open() as file:
-        rows = list(csv.reader(file))[1:]
-    return np.array([[float(value) for value in row[1:]] for row in rows])
 
 
 def run_room(name: str, seeds: int, rays_per_m3: float):
@@ -85,8 +73,8 @@ def main(argv=None):
         if not load_config(f'configs/{name}.toml').model.exists():
             print(f"skip {name}: private model not available")
             continue
-        measured = read_table(data / 'measured' / f'{name}.csv')
-        thesis = read_table(data / 'thesis_simulated' / f'{name}.csv')
+        measured = read_receiver_table(data / 'measured' / f'{name}.csv')
+        thesis = read_receiver_table(data / 'thesis_simulated' / f'{name}.csv')
         run = run_room(name, args.seeds, args.rays_per_m3)
         results[name] = (title, measured, thesis, run)
 
@@ -119,25 +107,6 @@ def main(argv=None):
     print_summary(summary)
     print(f"\nWrote {output / 'summary.csv'}, {output / 'receivers.csv'}, {output / 'validation.png'}")
     return 0
-
-
-def write_csv(path: Path, rows):
-    columns = list(dict.fromkeys(key for row in rows for key in row))
-    with path.open('w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=columns)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({key: (f'{value:.4f}' if isinstance(value, float) else value) for key, value in row.items()})
-
-
-def cell(row, key, width, fmt='.2f'):
-    """
-    One right-aligned table cell, '-' for missing values
-    """
-    value = row.get(key)
-    if isinstance(value, float) and not math.isnan(value):
-        return format(value, fmt).rjust(width)
-    return '-'.rjust(width)
 
 
 def print_summary(summary):

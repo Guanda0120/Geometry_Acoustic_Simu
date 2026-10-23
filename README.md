@@ -67,10 +67,13 @@ uv run gasim paths output/test_room/result.npz paths.3dm --receiver 1 --max-orde
 Experiments for the paper live in `experiments/`. They need the private models and the measured data kept outside the repository (`../data`, see its README):
 
 ```bash
-uv run python experiments/validation_rooms.py --seeds 5   # three rooms vs measurement and thesis engine, about 4 min
+uv run python experiments/validation_rooms.py --seeds 5     # paper Fig. 4: three rooms vs measurement and thesis engine, ~4 min
+uv run python experiments/wall_sweep.py absorption --seeds 5 # paper Fig. 6: wall absorption sweep in the test room vs CATT, ~30 s
+uv run python experiments/wall_sweep.py scattering --seeds 5 # paper Fig. 7: wall scattering sweep, ~30 s
+uv run python experiments/ray_count.py --seeds 10            # paper Fig. 5: T30 vs rays per m3 in the classroom, ~30 s
 ```
 
-Results go to `output/experiments/validation/` (summary and per-receiver CSV, figure).
+Each writes CSV tables and a figure to `output/experiments/<name>/`. The sweeps and the ray-count script also run without the private data (test room; no CATT or thesis curves).
 
 Thesis engine (Python configs): `uv run gasim run configs/legacy/test_room.py` writes decay plots, impulse responses (`.wav`) and pickled receivers to the config's `output_folder`; `gasim eyring` and `gasim export-paths` work on its configs and pickles.
 
