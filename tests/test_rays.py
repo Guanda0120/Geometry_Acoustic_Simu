@@ -128,3 +128,45 @@ def test_cli_run(tmp_path, capsys):
     assert main(['run', str(config), '--output', str(output)]) == 0
     assert output.exists()
     assert 'T30 (s)' in capsys.readouterr().out
+
+
+def lattice_histogram(size, source, receiver, wall, floor, ceiling, max_time, time_step=1e-3):
+    """
+    Exact energy response of a shoebox with specular walls: sum over the image lattice (Allen & Berkley 1979)
+    :param wall: Absorption of the four side walls; floor (z = 0) and ceiling (z = size[2]) separately
+    """
+    n_bins = int(max_time / time_step)
+    histogram = np.zeros(n_bins)
+    n = [int(np.ceil(C * max_time / length)) + 1 for length in size]
+    ii, jj = np.arange(-n[0], n[0] + 1), np.arange(-n[1], n[1] + 1)
+    x = np.where(ii % 2 == 0, ii * size[0] + source[0], (ii + 1) * size[0] - source[0]) - receiver[0]
+    y = np.where(jj % 2 == 0, jj * size[1] + source[1], (jj + 1) * size[1] - source[1]) - receiver[1]
+    xy2, side_reflections = x[:, None] ** 2 + y[None, :] ** 2, np.abs(ii)[:, None] + np.abs(jj)[None, :]
+    for k in range(-n[2], n[2] + 1):
+        z = (k * size[2] + source[2] if k % 2 == 0 else (k + 1) * size[2] - source[2]) - receiver[2]
+        ceiling_hits, floor_hits = (-(-k // 2), k // 2) if k >= 0 else ((-k) // 2, -(k // 2))
+        distance = np.sqrt(xy2 + z * z)
+        bins = (distance / (C * time_step)).astype(np.int64)
+        keep = bins < n_bins
+        energy = ((1 - wall) ** side_reflections * (1 - floor) ** floor_hits * (1 - ceiling) ** ceiling_hits
+                  / (4 * np.pi * distance ** 2))
+        np.add.at(histogram, bins[keep], energy[keep])
+    return histogram
+
+
+def test_specular_non_diffuse_room_matches_the_image_lattice():
+    # 9 x 7 x 5 m, absorptive floor, hard walls and ceiling, no scattering: the decay is far from diffuse
+    # (Eyring 0.64 s, exact T30 1.9 s); the tracer must follow the exact lattice, not Eyring
+    size, source, receiver = np.array([9.0, 7.0, 5.0]), [2.5, 3.5, 1.5], [7.0, 5.0, 1.5]
+    corners = box_polygons(*size)
+    materials = material_table({'Wall': {'absorption': 0.1, 'scattering': 0.0}, 'Floor': {'absorption': 0.75},
+                                'Ceiling': {'absorption': 0.1}})
+    polygons = [('Floor' if np.allclose(v[:, 2], 0) else 'Ceiling' if np.allclose(v[:, 2], size[2]) else 'Wall', v)
+                for _, v in corners]
+    room = build_room(polygons, materials, source, [receiver])
+    exact = decay_parameters(lattice_histogram(size, source, receiver, 0.1, 0.75, 0.1, 2.5), 1e-3)
+    rays = trace_rays(room, settings(rays=50_000, receiver_radius=0.2, max_time=2.5), C, NO_AIR)
+    traced = decay_parameters(rays.energy[0, 0], 1e-3)
+    assert float(exact.t30) > 2.5 * eyring(room, C)[0]
+    assert float(traced.t30) == pytest.approx(float(exact.t30), rel=0.06)
+    assert float(traced.t20) == pytest.approx(float(exact.t20), rel=0.06)

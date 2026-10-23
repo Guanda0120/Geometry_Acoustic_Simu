@@ -16,3 +16,21 @@ def test_validation_rooms_runs(tmp_path, monkeypatch):
     assert main(['--seeds', '1', '--rays-per-m3', '2', '--output', str(tmp_path)]) == 0
     assert (tmp_path / 'summary.csv').exists() and (tmp_path / 'validation.png').exists()
     sys.modules.pop('validation_rooms')
+
+
+def test_wall_sweep_runs(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from wall_sweep import main
+    for kind in ('absorption', 'scattering'):
+        assert main([kind, '--seeds', '1', '--rays', '300', '--values', '0.1', '0.5', '--output', str(tmp_path)]) == 0
+        assert (tmp_path / f'{kind}_sweep.csv').exists() and (tmp_path / f'{kind}_sweep.png').exists()
+    sys.modules.pop('wall_sweep')
+
+
+def test_ray_count_runs(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from ray_count import main
+    assert main(['--config', 'configs/test_room.toml', '--seeds', '2', '--densities', '1', '3',
+                 '--output', str(tmp_path)]) == 0
+    assert (tmp_path / 'ray_count.csv').exists()
+    sys.modules.pop('ray_count')

@@ -39,3 +39,7 @@ addopts = "-m 'not slow'"
 line-length = 120
 # The thesis engine is frozen until it is removed (see docs/rewrite-plan.md)
 extend-exclude = ["src/gasim/legacy", "configs/legacy"]
+
+[tool.ruff.lint.isort]
+# experiments/_common.py is imported by the experiment scripts next to it
+known-local-folder = ["_common"]

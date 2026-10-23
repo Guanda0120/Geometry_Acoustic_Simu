@@ -177,6 +177,7 @@ E_rain = e · (1 − α) · s · (1 − cos γ) · 2 cos θ · exp(−m·L) / (�
 | T-rays | Same box, N and 4N rays, 5 seeds each | Mean T30 agrees within the combined standard error (no drift with N) |
 | T-rain | Large single wall, s = 1 | Diffuse rain matches brute-force sphere detection with 10⁷ rays (statistical tolerance) |
 | T-ism | Shoebox, orders ≤ 3 | Image positions, delays and energies equal the Allen–Berkley lattice |
+| T-specular | 9 × 7 × 5 m shoebox, absorptive floor, hard walls, s = 0 (strongly non-diffuse) | T20/T30 of the tracer within 6 % of the exact image-lattice sum (8 M images); Eyring is 3× too short here |
 | T-hybrid | Shoebox, ISM + rays | Direct sound energy equals exp(−m·d)/(4πd²) exactly; no path counted twice |
 | T-materials | Material table round trip | Absorption used = absorption in config |
 | T-repro | Same config, same seed | Identical histograms |
@@ -196,7 +197,7 @@ Optional cross-check: pyroomacoustics (ISM + ray tracing) in a shoebox, as a dev
 | 7 | ISM, hybrid combination, path export to Rhino (`gasim paths`); `gasim run` with TOML configs uses the hybrid | T-ism, T-hybrid pass; test room runs end to end |
 | 8 | Performance: rays in 32 fixed parallel chunks (results independent of the thread count), image sources in parallel per receiver and first wall, benchmarks; no BVH needed (brute force meets the targets) | T-bench targets met |
 | 9 | Real rooms: models load and pass the checks (done in PR 4: closed, no overlaps); materials stay as in the thesis run configs for now (decision of 2026-10-22), reconciliation with the paper's appendix pending | Leak/overlap checks clean; runs complete |
-| 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure; first: `experiments/validation_rooms.py` (Fig. 4, Table 2) |
+| 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure: `validation_rooms.py` (Fig. 4), `wall_sweep.py absorption|scattering` (Figs. 6, 7), `ray_count.py` (Fig. 5) |
 | 11 | Surface sensitivity ∂T/∂αᵢ and uncertainty bands (§7) | Linear prediction agrees with full re-simulation for small Δα |
 | 12 | Remove `gasim.legacy` and `configs/legacy/`, docs, v1.0 release with a Zenodo DOI | GitHub `main` is the complete, runnable version cited in the paper |
 
@@ -215,6 +216,7 @@ Validation: compare the linear prediction T(α + Δα) ≈ T + ΣᵢΔαᵢ ∂T
 - **Real models may not be watertight** or may contain overlapping coplanar surfaces (see the classroom symptom in §2). The checks of PR 4 will show this; fixing models is PR 9.
 - **Band-dependent scattering** (resolved in PR 6): bands with different scattering are traced separately, which costs one tracing pass per distinct scattering pattern (at most six).
 - **Low-frequency bias** remains: geometrical acoustics ignores modes and diffraction. The new engine removes the implementation bias; it does not make 125–250 Hz wave-accurate.
+- **CATT reference of the sweeps** (found in PR 10): with the documented inputs (thesis Tables 4.12/4.14) CATT's 125 Hz values lie far below Eyring even for fully diffuse walls (s = 0.99: 0.68 s vs 1.85 s), so CATT's model cannot have had those inputs at 125 Hz; at 1–4 kHz and s = 0.99 it agrees with Eyring. In the non-diffuse test room CATT stays near Eyring where the exact lattice (s = 0) gives 3× Eyring. The CATT comparison is therefore not a clean benchmark; T-specular is the exact one.
 - **Measured data** need checking before the paper (duplicated position rows in the classroom sheet; logs that do not match the reported RT). This is outside the code but blocks PR 10's comparison with measurements.
 
 ## 9. Working agreement
