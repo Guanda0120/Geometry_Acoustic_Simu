@@ -1,0 +1,29 @@
+# lecture hall with the materials of the paper (Table A2) = thesis Table 4.5; configs/lecture_hall.toml has the thesis run's
+# Layer mapping from the model geometry and the room description (thesis 4.2.2): Floor = terrazzo, Door = timber,
+# Glass = double glazing, Absorber and Absorption_Plane (the two full-height side walls) = 20 mm glass-fibre panel,
+# Ceil = absorptive ceiling panel, Front (walls and soffit behind the lectern) = stone panel.
+# The model has no audience seating, so the seating row of the table is not used.
+
+[room]
+model = "models/private/JianZuTest.3dm"
+
+[materials]  # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Floor            = { absorption = [0.01, 0.01, 0.01, 0.01, 0.02, 0.02], scattering = 0.10 }
+Door             = { absorption = [0.16, 0.15, 0.10, 0.10, 0.10, 0.10], scattering = 0.10 }
+Glass            = { absorption = [0.05, 0.03, 0.04, 0.04, 0.05, 0.05], scattering = 0.10 }
+Absorber         = { absorption = [0.29, 0.36, 0.54, 0.41, 0.76, 0.72], scattering = 0.10 }
+Absorption_Plane = { absorption = [0.29, 0.36, 0.54, 0.41, 0.76, 0.72], scattering = 0.10 }
+Ceil             = { absorption = [0.39, 0.64, 0.85, 0.81, 0.91, 0.87], scattering = 0.10 }
+Front            = { absorption = [0.14, 0.14, 0.12, 0.11, 0.11, 0.10], scattering = 0.10 }
+
+[simulation]
+rays = 40000
+ism_order = 4
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 3.0
+seed = 1
+
+[air]
+temperature = 20.0
+humidity = 50.0
