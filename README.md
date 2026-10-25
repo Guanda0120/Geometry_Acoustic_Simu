@@ -71,6 +71,7 @@ uv run python experiments/validation_rooms.py --seeds 5     # paper Fig. 4: thre
 uv run python experiments/wall_sweep.py absorption --seeds 5 # paper Fig. 6: wall absorption sweep in the test room vs CATT, ~30 s
 uv run python experiments/wall_sweep.py scattering --seeds 5 # paper Fig. 7: wall scattering sweep, ~30 s
 uv run python experiments/ray_count.py --seeds 10            # paper Fig. 5: T30 vs rays per m3 in the classroom, ~30 s
+uv run python experiments/material_sources.py --seeds 3      # run-config vs paper-appendix materials, renovated hall
 ```
 
 Each writes CSV tables and a figure to `output/experiments/<name>/`. The sweeps and the ray-count script also run without the private data (test room; no CATT or thesis curves).
@@ -91,7 +92,9 @@ uv run ruff check          # lint (CI runs it and the tests on every PR)
 |---|---|---|
 | `configs/test_room.toml` | `models/Simple_Test.3dm` | 9 × 7 × 5 m box, quick check |
 | `configs/theater_1075.toml`, `theater_5057.toml`, `l2b.toml` | `models/*.3dm` | synthetic shape tests |
-| `configs/classroom.toml`, `lecture_hall.toml`, `mf_hall.toml` | `models/private/*.3dm` | real buildings — models are not published |
+| `configs/classroom.toml`, `lecture_hall.toml`, `mf_hall.toml` | `models/private/*.3dm` | real buildings with the materials of the thesis run configs — models are not published |
+| `configs/classroom_paper.toml`, `lecture_hall_paper.toml`, `mf_hall_paper.toml` | `models/private/*.3dm` | the same rooms with the materials of the paper's appendix (Tables A1–A3) |
+| `configs/mf_hall_renovated.toml` | `models/private/Real_Work.3dm` | multifunction hall after renovation (paper materials + renovation materials) |
 | `configs/legacy/test_room.py` | `models/Simple_Test.3dm` | thesis engine: 9 × 7 × 5 m box |
 | `configs/legacy/sweeps/absorption_*.py`, `scatter_*.py`, `rays_*xV.py` | `models/Simple_Test.3dm` | absorption, scattering and ray-count sweeps |
 | `configs/legacy/theater_1075.py`, `theater_5057.py`, `l2b.py` | `models/*.3dm` | synthetic shape tests |

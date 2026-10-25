@@ -196,7 +196,7 @@ Optional cross-check: pyroomacoustics (ISM + ray tracing) in a shoebox, as a dev
 | 6 | Ray tracer with diffuse rain (Numba, single thread is fine) | T-energy, T-diffuse, T-rays, T-rain, T-repro pass |
 | 7 | ISM, hybrid combination, path export to Rhino (`gasim paths`); `gasim run` with TOML configs uses the hybrid | T-ism, T-hybrid pass; test room runs end to end |
 | 8 | Performance: rays in 32 fixed parallel chunks (results independent of the thread count), image sources in parallel per receiver and first wall, benchmarks; no BVH needed (brute force meets the targets) | T-bench targets met |
-| 9 | Real rooms: models load and pass the checks (done in PR 4: closed, no overlaps); materials stay as in the thesis run configs for now (decision of 2026-10-22), reconciliation with the paper's appendix pending | Leak/overlap checks clean; runs complete |
+| 9 | Real rooms: models load and pass the checks (done in PR 4: closed, no overlaps); materials stay as in the thesis run configs for now (decision of 2026-10-22); the paper's appendix materials are in `configs/*_paper.toml` and compared in `experiments/material_sources.py` (see §8) | Leak/overlap checks clean; runs complete |
 | 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure: `validation_rooms.py` (Fig. 4), `wall_sweep.py absorption|scattering` (Figs. 6, 7), `ray_count.py` (Fig. 5) |
 | 11 | Surface sensitivity ∂T/∂αᵢ and uncertainty bands (§7) | Linear prediction agrees with full re-simulation for small Δα |
 | 12 | Remove `gasim.legacy` and `configs/legacy/`, docs, v1.0 release with a Zenodo DOI | GitHub `main` is the complete, runnable version cited in the paper |
@@ -211,12 +211,25 @@ The energy of a path is proportional to ∏ⱼ(1 − αⱼ)^nⱼ, nⱼ being the
 
 Validation: compare the linear prediction T(α + Δα) ≈ T + ΣᵢΔαᵢ ∂T/∂αᵢ with full re-simulations.
 
+Inputs for the multifunction hall (checked in the material-sources experiment):
+
+- Surfaces: the model's polygons fall into the six surfaces of paper Fig. 9 by layer and position — ceiling (layer
+  White, 594.4 m²), floor (555.7 m², Fig. 9: 552), wall A (y ≥ 16.6 m, 234.7 m², Fig. 9: 236), wall B (glazed,
+  y ≤ 2.4 m, 273.6 m², Fig. 9: 274), wall C (behind the stage, LED + upholstery, 162.9 m², Fig. 9: 163) and wall D
+  (rear, x ≥ 25.6 m, 160.2 m², Fig. 9: 160). Sensitivities are needed per surface, not per layer, so PR 11 adds surface
+  groups (a rule or a group layer in the model) on top of the per-layer materials.
+- Materials: paper Table A3 before and after (`configs/mf_hall_paper.toml`, `configs/mf_hall_renovated.toml`);
+  scattering is not documented for the halls (0.10 assumed) and no test reports of the absorption data are on file, so
+  the uncertainty ranges for the RT intervals have to come from the literature.
+- Measurements: before per receiver; after only as a room mean whose source is unresolved (see data/README.md).
+
 ## 8. Risks
 
 - **Real models may not be watertight** or may contain overlapping coplanar surfaces (see the classroom symptom in §2). The checks of PR 4 will show this; fixing models is PR 9.
 - **Band-dependent scattering** (resolved in PR 6): bands with different scattering are traced separately, which costs one tracing pass per distinct scattering pattern (at most six).
 - **Low-frequency bias** remains: geometrical acoustics ignores modes and diffraction. The new engine removes the implementation bias; it does not make 125–250 Hz wave-accurate.
 - **CATT reference of the sweeps** (found in PR 10): with the documented inputs (thesis Tables 4.12/4.14) CATT's 125 Hz values lie far below Eyring even for fully diffuse walls (s = 0.99: 0.68 s vs 1.85 s), so CATT's model cannot have had those inputs at 125 Hz; at 1–4 kHz and s = 0.99 it agrees with Eyring. In the non-diffuse test room CATT stays near Eyring where the exact lattice (s = 0) gives 3× Eyring. The CATT comparison is therefore not a clean benchmark; T-specular is the exact one.
+- **Materials of the real rooms** (found with `experiments/material_sources.py`, 100 rays/m³, 3 seeds): neither source reproduces the multifunction hall. The run-config materials give 0.85 at 500 Hz for both wall panels and a ceiling at 0.15–0.32 (the paper: plaster, 0.03–0.07) and miss the measurement by −60 % at 500 Hz; the paper's Table A3 gives +17 % to +107 % in every band, because `Real_Work.3dm` has no seats or tables (the thesis text says they were modelled as boxes). Rough Sabine estimate: ~120 m² of seating absorption would bring 1 kHz to ~2.2 s before (measured 2.50) and ~1.1 s after renovation (measured 1.16). With Table A3 the thesis engine's −18 % agreement can only come from its energy bias offsetting the missing absorption. The classroom's two sources are almost identical (new engine +5–17 % at 250 Hz–4 kHz); in the lecture hall the run-config set is closer at 250 Hz–2 kHz and the paper set at 4 kHz. Needed before the paper: a hall model with the seating, and one documented material set per room.
 - **Measured data** need checking before the paper (duplicated position rows in the classroom sheet; logs that do not match the reported RT). This is outside the code but blocks PR 10's comparison with measurements.
 
 ## 9. Working agreement

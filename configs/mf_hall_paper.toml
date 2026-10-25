@@ -1,0 +1,29 @@
+# multifunction hall before renovation with the materials of the paper (Table A3) = thesis Table 4.8;
+# configs/mf_hall.toml has the thesis run's. Layer mapping: Floor = floor tiles (and stage), White = plastered ceiling,
+# Glass = double glazing, Col = wall tiles (columns and piers), Door = timber, Led = LED screen,
+# Wood = wood-grain perforated panel, Woolen = leatherette upholstered panel
+
+[room]
+model = "models/private/Real_Work.3dm"
+
+[materials]  # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
+Floor  = { absorption = [0.01, 0.01, 0.02, 0.02, 0.02, 0.03], scattering = 0.10 }
+White  = { absorption = [0.07, 0.05, 0.03, 0.03, 0.04, 0.04], scattering = 0.10 }
+Glass  = { absorption = [0.05, 0.03, 0.04, 0.04, 0.05, 0.05], scattering = 0.10 }
+Col    = { absorption = [0.01, 0.01, 0.02, 0.02, 0.02, 0.03], scattering = 0.10 }
+Door   = { absorption = [0.16, 0.15, 0.10, 0.10, 0.10, 0.10], scattering = 0.10 }
+Led    = { absorption = [0.08, 0.05, 0.04, 0.04, 0.04, 0.04], scattering = 0.10 }
+Wood   = { absorption = [0.24, 0.34, 0.37, 0.19, 0.29, 0.23], scattering = 0.10 }
+Woolen = { absorption = [0.11, 0.18, 0.43, 0.49, 0.63, 0.67], scattering = 0.10 }
+
+[simulation]
+rays = 40000
+ism_order = 3
+receiver_radius = 0.2
+time_step = 0.001
+max_time = 4.0
+seed = 1
+
+[air]
+temperature = 20.0
+humidity = 50.0
