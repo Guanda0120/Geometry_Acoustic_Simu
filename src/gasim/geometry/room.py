@@ -26,6 +26,17 @@ class Room:
     materials: MaterialTable
     source: np.ndarray  # (3,)
     receivers: np.ndarray  # (R, 3)
+    surface_names: tuple = None  # S surface names (gasim.surfaces); default: the material names
+    poly_surface: np.ndarray = None  # (P,) surface of each polygon; default: its material
+
+    def __post_init__(self):
+        if self.poly_surface is None:
+            object.__setattr__(self, 'surface_names', tuple(self.materials.names))
+            object.__setattr__(self, 'poly_surface', np.asarray(self.poly_material, dtype=np.int64))
+
+    @property
+    def n_surfaces(self):
+        return len(self.surface_names)
 
     @property
     def n_polygons(self):
@@ -50,6 +61,12 @@ class Room:
         """
         areas = np.bincount(self.poly_material, weights=self.poly_area, minlength=len(self.materials.names))
         return dict(zip(self.materials.names, areas.tolist()))
+
+    def area_by_surface(self):
+        """
+        :return: (S,) total area of each surface, m2
+        """
+        return np.bincount(self.poly_surface, weights=self.poly_area, minlength=self.n_surfaces)
 
     def absorption_area(self):
         """

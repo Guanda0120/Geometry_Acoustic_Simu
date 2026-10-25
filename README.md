@@ -2,7 +2,7 @@
 
 Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tracing + diffuse rain) that reads room geometry directly from Rhinoceros `.3dm` files and estimates octave-band reverberation time (125 Hz – 4 kHz).
 
-> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), computes the early specular reflections with image sources and everything else with energy-particle ray tracing and diffuse rain, evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config) and exports the image-source paths to Rhino (`gasim paths`). It runs on all CPU cores; results do not depend on the number of threads. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
+> **Status.** The new engine in `src/gasim/` is being built step by step — see [docs/rewrite-plan.md](docs/rewrite-plan.md). It reads and checks room models (`gasim check`), computes the early specular reflections with image sources and everything else with energy-particle ray tracing and diffuse rain, evaluates the decay curves after ISO 3382 (`gasim run` with a TOML config), reports reflections and energy per surface (`gasim surfaces`) and exports the image-source paths to Rhino (`gasim paths`). It runs on all CPU cores; results do not depend on the number of threads. The engine of the 2023 master's thesis (`gasim.legacy`, tag `thesis-2023`) is kept for comparison; its propagation physics has known errors (see below), so do not use its results for design decisions.
 
 ## Layout
 
@@ -10,15 +10,16 @@ Hybrid geometrical-acoustics room simulation (image sources + stochastic ray tra
 ├── main.py              run from a source checkout: python main.py <command>
 ├── pyproject.toml       package metadata and dependencies (uv)
 ├── src/gasim/
-│   ├── cli.py           command line interface (gasim check / run / paths; eyring / export-paths for the thesis engine)
+│   ├── cli.py           command line interface (gasim check / run / surfaces / paths; eyring / export-paths for the thesis engine)
 │   ├── config.py        TOML configs
 │   ├── materials.py     absorption and scattering per octave band
+│   ├── surfaces.py      named groups of polygons (walls, ceiling, ...) for the statistics per surface
 │   ├── air.py           speed of sound, ISO 9613-1 air absorption
 │   ├── geometry/        Room arrays, triangulation, inward normals, model checks
 │   ├── io/              .3dm reader, result files (.npz)
 │   ├── propagation/     image sources, ray tracing with diffuse rain, hybrid (Numba)
 │   ├── simulate.py      config -> Result
-│   ├── analysis/        Schroeder curves, EDT/T20/T30 (ISO 3382), Sabine/Eyring/Kuttruff
+│   ├── analysis/        Schroeder curves, EDT/T20/T30 (ISO 3382), Sabine/Eyring/Kuttruff, surface statistics
 │   └── legacy/          thesis-2023 engine, physics unchanged
 ├── configs/             TOML configs of the rooms
 │   └── legacy/          run settings of the thesis engine (rooms and sweeps)
@@ -58,6 +59,12 @@ uv run gasim run configs/test_room.toml
 
 It prints EDT/T20/T30 per band (room mean and per receiver) next to Eyring and saves the energy histograms and image-source paths to `output/test_room/result.npz` (`--output` to change). The test room with 31 500 rays and third-order image sources takes under a second on a laptop (`--threads N` limits the CPU threads; the result is identical). `python main.py <command>` does the same without installing.
 
+Print, for one band, the reflections and the energy per surface of a result: image-source reflection points, ray hits and incident energy per m² relative to the room mean (1 on every surface of a diffuse field), the share of the wall absorption each surface takes and the share of the received energy that arrives with it as the last reflection:
+
+```bash
+uv run gasim surfaces output/test_room/result.npz --band 1000
+```
+
 Write the image-source paths of a receiver to Rhino, one layer per reflection order, each curve named after the surfaces it reflects from:
 
 ```bash
@@ -72,6 +79,7 @@ uv run python experiments/wall_sweep.py absorption --seeds 5 # paper Fig. 6: wal
 uv run python experiments/wall_sweep.py scattering --seeds 5 # paper Fig. 7: wall scattering sweep, ~30 s
 uv run python experiments/ray_count.py --seeds 10            # paper Fig. 5: T30 vs rays per m3 in the classroom, ~30 s
 uv run python experiments/material_sources.py --seeds 3      # run-config vs paper-appendix materials, renovated hall
+uv run python experiments/surface_statistics.py              # paper Fig. 9: reflections and energy per surface of the hall, ~1 min
 ```
 
 Each writes CSV tables and a figure to `output/experiments/<name>/`. The sweeps and the ray-count script also run without the private data (test room; no CATT or thesis curves).
@@ -100,7 +108,7 @@ uv run ruff check          # lint (CI runs it and the tests on every PR)
 | `configs/legacy/theater_1075.py`, `theater_5057.py`, `l2b.py` | `models/*.3dm` | synthetic shape tests |
 | `configs/legacy/classroom.py`, `lecture_hall_*.py`, `mf_hall.py` | `models/private/*.3dm` | real buildings — models are not published |
 
-All configs were ported from the thesis runs (materials and ray counts unchanged); the materials of the real rooms have not yet been reconciled with the paper's appendix. A TOML config looks like:
+The configs without `_paper` were ported from the thesis runs (materials and ray counts unchanged); the multifunction-hall configs define the walls A–D of the paper as surfaces. A TOML config looks like:
 
 ```toml
 [room]
@@ -108,6 +116,12 @@ model = "models/Simple_Test.3dm"
 
 [materials]   # layer name = absorption and scattering, one value or one per octave band 125 Hz - 4 kHz
 Wood = { absorption = [0.10, 0.20, 0.10, 0.20, 0.30, 0.40], scattering = 0.10 }
+
+[surfaces]    # optional: groups of polygons for the statistics per surface, first matching rule wins
+floor   = { normal = [0, 0, 1] }                  # inward normal within max_angle (default 45 deg)
+wall_x0 = { x = [0, 0] }                          # all vertices within the x (y, z) range
+glazing = { layers = ["Glass"] }                  # layer names
+rest    = {}                                      # everything else; without a catch-all it is "other"
 
 [simulation]  # all optional
 rays = 31500
@@ -122,7 +136,7 @@ temperature = 20.0
 humidity = 50.0
 ```
 
-In a `.3dm` file every layer with surfaces is a material; points on `Source` (exactly one) and `Receiver` are the source and receivers. Surfaces must be planar polygons without holes, in metres, centimetres or millimetres. The new engine orients normals itself; the legacy layers `Center_pt` / `Direc_line` are only read by the thesis engine.
+Without `[surfaces]` every layer is one surface. In a `.3dm` file every layer with surfaces is a material; points on `Source` (exactly one) and `Receiver` are the source and receivers. Surfaces must be planar polygons without holes, in metres, centimetres or millimetres. The new engine orients normals itself; the legacy layers `Center_pt` / `Direc_line` are only read by the thesis engine.
 
 ## Known issues of the legacy engine
 

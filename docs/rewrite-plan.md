@@ -52,6 +52,7 @@ src/gasim/
 ├── config.py            dataclasses + TOML loading/validation
 ├── bands.py             octave-band centres, band count
 ├── materials.py         material library (absorption, scattering per band)
+├── surfaces.py          named groups of polygons ([surfaces] rules), independent of the materials
 ├── air.py               ISO 9613-1 air attenuation
 ├── geometry/
 │   ├── room.py          Room: flat arrays of triangles, polygons, normals, materials
@@ -67,7 +68,8 @@ src/gasim/
 ├── analysis/
 │   ├── decay.py         Schroeder integration, EDT/T20/T30
 │   ├── statistical.py   Sabine, Eyring (with air absorption)
-│   └── sensitivity.py   ∂T/∂αᵢ (PR 11)
+│   ├── surfaces.py      reflections and energy per surface (PR 11a)
+│   └── sensitivity.py   ∂T/∂αᵢ per surface (PR 11b)
 ├── simulate.py          one function: config → Result
 ├── cli.py               gasim check / run / eyring / export-paths (.py configs run the legacy engine)
 └── legacy/              removed in PR 12
@@ -198,7 +200,8 @@ Optional cross-check: pyroomacoustics (ISM + ray tracing) in a shoebox, as a dev
 | 8 | Performance: rays in 32 fixed parallel chunks (results independent of the thread count), image sources in parallel per receiver and first wall, benchmarks; no BVH needed (brute force meets the targets) | T-bench targets met |
 | 9 | Real rooms: models load and pass the checks (done in PR 4: closed, no overlaps); materials stay as in the thesis run configs for now (decision of 2026-10-22); the paper's appendix materials are in `configs/*_paper.toml` and compared in `experiments/material_sources.py` (see §8) | Leak/overlap checks clean; runs complete |
 | 10 | `experiments/`: scripts for every figure of the paper (validation rooms, absorption/scattering/ray-count sweeps with several seeds, CATT comparison), reading data from `../data` | One command per figure: `validation_rooms.py` (Fig. 4), `wall_sweep.py absorption|scattering` (Figs. 6, 7), `ray_count.py` (Fig. 5) |
-| 11 | Surface sensitivity ∂T/∂αᵢ and uncertainty bands (§7) | Linear prediction agrees with full re-simulation for small Δα |
+| 11a | Surfaces (`[surfaces]` rules) and statistics per surface in every result: image-source reflection points, ray hits, incident and absorbed energy, received energy by last reflecting surface; `gasim surfaces`; `experiments/surface_statistics.py` (paper Fig. 9) | Hit counts and energies add up to the totals; hits per m² uniform in a diffuse box; hall walls A–D match the areas of Fig. 9 |
+| 11b | Surface sensitivity ∂T/∂αᵢ per surface and uncertainty bands (§7) | Linear prediction agrees with full re-simulation for small Δα |
 | 12 | Remove `gasim.legacy` and `configs/legacy/`, docs, v1.0 release with a Zenodo DOI | GitHub `main` is the complete, runnable version cited in the paper |
 
 ## 7. New contribution: surface sensitivity (PR 11)
@@ -222,6 +225,8 @@ Inputs for the multifunction hall (checked in the material-sources experiment):
   scattering is not documented for the halls (0.10 assumed) and no test reports of the absorption data are on file, so
   the uncertainty ranges for the RT intervals have to come from the literature.
 - Measurements: before per receiver; after only as a room mean whose source is unresolved (see data/README.md).
+
+First result of PR 11a (paper materials, 100 rays/m³, 1 kHz): the ray hits per m² are within 1–5 % of the room mean on every surface of the hall, so the stochastic counts cannot rank surfaces, which is what a near-diffuse field predicts. Only the image-source points differ per m² (wall C 2.2×, D 1.7×, A 1.4× the mean; the source stands in front of wall C). Of the energy absorbed by the walls, wall C takes 36 %, A 26 %, D 16 % and the ceiling 10 % before renovation; after it the ceiling takes 32 %. These shares, and the sensitivities of PR 11b, replace the hit densities as the treatment indicator.
 
 ## 8. Risks
 

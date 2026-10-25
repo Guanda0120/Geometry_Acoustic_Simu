@@ -10,6 +10,14 @@ Mat     = { absorption = [0.15, 0.20, 0.30, 0.45, 0.45, 0.40], scattering = 0.10
 Plaster = { absorption = [0.01, 0.02, 0.05, 0.10, 0.15, 0.20], scattering = 0.10 }
 Wood    = { absorption = [0.10, 0.20, 0.10, 0.20, 0.30, 0.40], scattering = 0.10 }
 
+[surfaces]  # optional grouping of the polygons for the statistics per surface; normals point into the room
+floor   = { normal = [0, 0, 1] }
+ceiling = { normal = [0, 0, -1] }
+wall_x0 = { x = [0, 0] }
+wall_x9 = { x = [9, 9] }
+wall_y0 = { y = [0, 0] }
+wall_y7 = { y = [7, 7] }
+
 [simulation]
 rays = 31500  # 100 rays per m3
 ism_order = 3

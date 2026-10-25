@@ -91,6 +91,8 @@ def _check(args: argparse.Namespace):
     :param args: Parsed arguments with config
     :return: Exit code, 0 if all checks pass
     """
+    import numpy as np
+
     from gasim.air import energy_attenuation, speed_of_sound
     from gasim.analysis.statistical import eyring, sabine
     from gasim.bands import OCTAVE_BANDS
@@ -110,6 +112,10 @@ def _check(args: argparse.Namespace):
           f"{int(room.poly_flipped.sum())} normals reversed to point inwards")
     print(f"Volume     {room.volume:.1f} m3, surface {room.surface_area:.1f} m2")
     print(f"Materials  {used}" + (f" | unused: {', '.join(unused)}" if unused else ""))
+    if config.surfaces:
+        counts = np.bincount(room.poly_surface, minlength=room.n_surfaces)
+        print('Surfaces   ' + ' | '.join(f"{name} {area:.1f} m2 ({count})" for name, area, count
+                                         in zip(room.surface_names, room.area_by_surface(), counts)))
     print(f"Source     {'inside' if report.source_inside else 'OUTSIDE'}; receivers inside: "
           f"{int(report.receivers_inside.sum())} of {len(report.receivers_inside)}")
     print(f"Leaks      {report.escaped_rays} of {report.traced_rays} rays escaped")
@@ -143,6 +149,49 @@ def _paths(args: argparse.Namespace):
     count = write_paths(result.paths, args.output, receiver=args.receiver - 1, max_order=args.max_order,
                         layers=result.metadata.get('layers'))
     print(f"Wrote {count} paths of receiver {args.receiver} to {args.output}")
+    return 0
+
+
+def _surfaces(args: argparse.Namespace):
+    """
+    Print the statistics per surface of a result for one band
+    :param args: Parsed arguments with result and band
+    """
+    import numpy as np
+
+    from gasim.io.results import load_result
+
+    result = load_result(args.result)
+    stats = result.surfaces
+    if stats is None:
+        raise SystemExit(f"{args.result} holds no surface statistics (result format 3 or later)")
+    bands = [int(band) for band in result.bands]
+    if args.band not in bands:
+        raise SystemExit(f"band must be one of {bands}")
+    b = bands.index(args.band)
+    ism = stats.ism_reflections.sum(axis=(0, 1))  # all receivers and orders
+    columns = {
+        'area m2': (stats.area, '.1f'),
+        'ISM refl.': (ism, 'd'),
+        'ISM /m2 rel': (stats.relative_density(ism), '.2f'),
+        'ray hits /m2 rel': (stats.relative_density(stats.ray_hits[b]), '.2f'),
+        'incident /m2 rel': (stats.relative_density(stats.incident[b]), '.2f'),
+        'absorbed %': (100 * stats.absorbed_share()[b], '.1f'),
+        'received % (mean R)': (100 * stats.received_share()[:, b].mean(axis=0), '.1f'),
+    }
+    width = max(len(name) for name in stats.names) + 2
+    print(f"{args.result}, {args.band} Hz; 'rel' = per m2 relative to the room average (1 in a diffuse field)")
+    print(f"{'surface':<{width}}" + ''.join(f'{title:>{len(title) + 3}}' for title in columns))
+    for s, name in enumerate(stats.names):
+        cells = []
+        for title, (values, fmt) in columns.items():
+            value = values[s]
+            text = '-' if isinstance(value, float) and np.isnan(value) else format(value, fmt)
+            cells.append(text.rjust(len(title) + 3))
+        print(f"{name:<{width}}" + ''.join(cells))
+    direct = 100 * (stats.direct[:, b] / (stats.received[:, b].sum(axis=-1) + stats.direct[:, b])).mean()
+    print(f"{'direct sound':<{width}}" + ' ' * sum(len(t) + 3 for t in list(columns)[:-1])
+          + f"{direct:.1f}".rjust(len('received % (mean R)') + 3))
     return 0
 
 
@@ -189,6 +238,11 @@ def build_parser():
     pth.add_argument('--receiver', type=int, default=1, help='receiver number, 1 = first (default)')
     pth.add_argument('--max-order', type=int, help='highest reflection order to write')
     pth.set_defaults(func=_paths)
+
+    srf = sub.add_parser('surfaces', help='print reflections and energy per surface of a result')
+    srf.add_argument('result', help='result of gasim run, e.g. output/test_room/result.npz')
+    srf.add_argument('--band', type=int, default=1000, help='octave band in Hz, default 1000')
+    srf.set_defaults(func=_surfaces)
 
     exp = sub.add_parser('export-paths', help='write paths saved by the thesis engine (.pkl) to a .3dm file')
     exp.add_argument('kind', choices=['image', 'stochastic'])
