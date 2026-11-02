@@ -198,3 +198,40 @@ def add_to_histogram(paths: ImageSourcePaths, histogram: np.ndarray, time_step: 
     inside = bins < histogram.shape[2]
     for receiver, k, energy in zip(paths.receiver[inside], bins[inside], paths.energy[inside]):
         histogram[receiver, :, k] += energy
+
+
+def reflections_by_surface(paths: ImageSourcePaths, poly_surface: np.ndarray, n_receivers: int, n_surfaces: int):
+    """
+    Count the reflection points of the valid paths on each surface
+    :param paths: ImageSourcePaths
+    :param poly_surface: (P,) surface of each polygon
+    :return: (R, N, S) reflection points per receiver, reflection order 1 .. N (column 0 = first order)
+    """
+    max_order = paths.planes.shape[1]
+    counts = np.zeros((n_receivers, max_order, n_surfaces), np.int64)
+    for column in range(max_order):
+        # The reflection in this column belongs to a path of order >= column + 1
+        reflected = paths.planes[:, column] >= 0
+        for order in range(column + 1, max_order + 1):
+            rows = reflected & (paths.order == order)
+            np.add.at(counts[:, order - 1], (paths.receiver[rows], poly_surface[paths.planes[rows, column]]), 1)
+    return counts
+
+
+def received_by_last_surface(paths: ImageSourcePaths, poly_surface: np.ndarray, n_receivers: int, n_surfaces: int,
+                             n_bins: int, time_step: float, speed_of_sound: float):
+    """
+    Path energy per receiver, by the surface of the last reflection, for the paths inside the histogram
+    :return: (R, B, S) reflected energy, (R, B) direct sound, both 1/m2
+    """
+    inside = (paths.length / (speed_of_sound * time_step)).astype(np.int64) < n_bins
+    n_bands = paths.energy.shape[1]
+    received = np.zeros((n_receivers, n_bands, n_surfaces))
+    direct = np.zeros((n_receivers, n_bands))
+    for receiver, order, planes, energy in zip(paths.receiver[inside], paths.order[inside], paths.planes[inside],
+                                               paths.energy[inside]):
+        if order == 0:
+            direct[receiver] += energy
+        else:
+            received[receiver, :, poly_surface[planes[order - 1]]] += energy
+    return received, direct

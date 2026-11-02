@@ -4,6 +4,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 
 from gasim.materials import MaterialTable, material_table
+from gasim.surfaces import surface_rules
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class Config:
     simulation: SimulationSettings
     air: AirConditions
     path: Path  # the config file itself
+    surfaces: tuple = ()  # SurfaceRule per [surfaces] entry; empty: one surface per layer
 
 
 def _section(cls, values: dict, name: str):
@@ -81,7 +83,7 @@ def load_config(path):
     with path.open('rb') as file:
         data = tomllib.load(file)
 
-    unknown = set(data) - {'room', 'materials', 'simulation', 'air'}
+    unknown = set(data) - {'room', 'materials', 'surfaces', 'simulation', 'air'}
     if unknown:
         raise ValueError(f"Unknown section(s) in {path}: {', '.join(sorted(unknown))}")
     room = data.get('room', {})
@@ -92,4 +94,5 @@ def load_config(path):
                   materials=material_table(data.get('materials', {})),
                   simulation=_section(SimulationSettings, data.get('simulation', {}), 'simulation'),
                   air=_section(AirConditions, data.get('air', {}), 'air'),
-                  path=path)
+                  path=path,
+                  surfaces=surface_rules(data.get('surfaces', {})))

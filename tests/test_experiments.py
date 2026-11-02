@@ -60,3 +60,12 @@ def test_material_sources_runs(tmp_path, monkeypatch):
     assert main(['--cases', 'classroom', '--seeds', '1', '--rays-per-m3', '2', '--output', str(tmp_path)]) == 0
     assert (tmp_path / 'material_sources.csv').exists() and (tmp_path / 'material_sources.png').exists()
     sys.modules.pop('material_sources')
+
+
+@pytest.mark.skipif(not Path('models/private/Real_Work.3dm').exists(), reason='needs the private hall model')
+def test_surface_statistics_runs(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from surface_statistics import main
+    assert main(['--rays-per-m3', '2', '--output', str(tmp_path)]) == 0
+    assert (tmp_path / 'surface_statistics.csv').exists() and (tmp_path / 'surface_statistics.png').exists()
+    sys.modules.pop('surface_statistics')

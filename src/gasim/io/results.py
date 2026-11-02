@@ -3,7 +3,7 @@ Simulation results: energy histograms per receiver and band, saved as one .npz f
 
 The file holds plain arrays and a JSON metadata string (config, seed, version, timings), so it can be
 read back without pickle and traced to the run that produced it. Since format 2 it can also hold the
-image-source paths, for export to Rhino.
+image-source paths, for export to Rhino, and since format 3 the statistics per surface.
 """
 import json
 from dataclasses import dataclass, field, fields
@@ -13,10 +13,11 @@ import numpy as np
 
 from gasim import __version__
 from gasim.analysis.decay import decay_parameters
+from gasim.analysis.surfaces import SurfaceStatistics, statistics_arrays, statistics_from_arrays
 from gasim.propagation.image_sources import ImageSourcePaths
 
-FORMAT_VERSION = 2
-READABLE_VERSIONS = (1, 2)
+FORMAT_VERSION = 3
+READABLE_VERSIONS = (1, 2, 3)
 _ARRAYS = ('energy', 'bands', 'source', 'receivers')
 
 
@@ -36,6 +37,7 @@ class Result:
     receivers: np.ndarray  # (R, 3)
     metadata: dict = field(default_factory=dict)
     paths: ImageSourcePaths = None  # image-source paths, if the run had them
+    surfaces: SurfaceStatistics = None  # statistics per surface, if the run had them
 
     def __post_init__(self):
         n_receivers, n_bands, _ = self.energy.shape
@@ -84,6 +86,8 @@ def save_result(result: Result, path):
     arrays = {name: getattr(result, name) for name in _ARRAYS}
     if result.paths is not None:
         arrays.update({f'path_{f.name}': getattr(result.paths, f.name) for f in fields(ImageSourcePaths)})
+    if result.surfaces is not None:
+        arrays.update({f'surface_{name}': value for name, value in statistics_arrays(result.surfaces).items()})
     np.savez_compressed(path, format_version=FORMAT_VERSION, time_step=result.time_step,
                         metadata=json.dumps(result.metadata), **arrays)
 
@@ -98,8 +102,11 @@ def load_result(path):
         version = int(data['format_version'])
         if version not in READABLE_VERSIONS:
             raise ValueError(f"{path}: result format {version}, this gasim reads formats {READABLE_VERSIONS}")
-        paths = None
+        paths = surfaces = None
         if 'path_order' in data:
             paths = ImageSourcePaths(**{f.name: data[f'path_{f.name}'] for f in fields(ImageSourcePaths)})
+        if 'surface_names' in data:
+            surfaces = statistics_from_arrays({name[len('surface_'):]: data[name] for name in data.files
+                                               if name.startswith('surface_')})
         return Result(time_step=float(data['time_step']), metadata=json.loads(str(data['metadata'])), paths=paths,
-                      **{name: data[name] for name in _ARRAYS})
+                      surfaces=surfaces, **{name: data[name] for name in _ARRAYS})

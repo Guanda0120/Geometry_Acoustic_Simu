@@ -14,6 +14,14 @@ Woolen = { absorption = [0.35, 0.42, 0.85, 0.39, 0.52, 0.50], scattering = 0.10 
 Col    = { absorption = [0.02, 0.01, 0.02, 0.02, 0.02, 0.03], scattering = 0.10 }
 White  = { absorption = [0.23, 0.15, 0.30, 0.21, 0.32, 0.24], scattering = 0.10 }
 
+[surfaces]  # walls as in paper Fig. 9: A solid side wall, B glazed wall, C behind the stage, D rear wall
+ceiling = { layers = ["White"] }
+floor   = { layers = ["Floor"] }
+wall_C  = { x = [-0.1, 3.61], y = [2.39, 16.61] }
+wall_B  = { y = [-0.1, 2.41] }
+wall_D  = { x = [25.59, 30.1], normal = [-1, 0, 0] }
+wall_A  = {}
+
 [simulation]
 rays = 20000
 ism_order = 3
