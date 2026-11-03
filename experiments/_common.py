@@ -1,13 +1,18 @@
 """Helpers shared by the experiment scripts."""
 import csv
 import dataclasses
+import json
 import math
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import numpy as np
 
+from gasim import __version__
 from gasim.air import energy_attenuation, speed_of_sound
-from gasim.analysis.statistical import eyring
+from gasim.analysis.statistical import eyring, sabine
 from gasim.config import Config
 from gasim.geometry import load_room
 from gasim.materials import material_table
@@ -94,12 +99,54 @@ def eyring_of(config: Config):
     return eyring(room, speed_of_sound(air.temperature), energy_attenuation(air.temperature, air.humidity, air.pressure))
 
 
+def sabine_of(config: Config):
+    """
+    :return: (B,) Sabine reverberation time of the config's room, air absorption included
+    """
+    room, _ = load_room(config)
+    air = config.air
+    return sabine(room, speed_of_sound(air.temperature), energy_attenuation(air.temperature, air.humidity, air.pressure))
+
+
+def write_run_info(output: Path, started: float, **extra):
+    """
+    Write run_info.json next to the results: command line, gasim version, git commit, run time
+    :param started: time.time() at the start of the run
+    :param extra: Further JSON-serialisable entries, e.g. configs and seeds
+    """
+    try:
+        commit = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip()
+        dirty = bool(subprocess.run(['git', 'status', '--porcelain', 'src'], capture_output=True, text=True, check=False).stdout)
+    except (OSError, subprocess.CalledProcessError):
+        commit, dirty = None, None
+    info = {'command': sys.argv, 'gasim_version': __version__, 'git_commit': commit, 'src_modified': dirty,
+            'finished': time.strftime('%Y-%m-%d %H:%M:%S'), 'seconds': round(time.time() - started, 1), **extra}
+    (output / 'run_info.json').write_text(json.dumps(info, indent=2, default=str))
+
+
+def with_decay_time(config: Config):
+    """
+    :return: Config traced long enough for a 70 dB decay of the slowest band, with room for a non-diffuse
+             tail (1.5 x Eyring), at least as long as the config asks and at most 12 s
+    """
+    longest = float(np.max(eyring_of(config)))
+    return with_settings(config, max_time=min(12.0, max(config.simulation.max_time, 1.5 * longest * 70 / 60)))
+
+
+def room_value(values: np.ndarray):
+    """
+    :param values: (S, R, B) one parameter per seed, receiver and band
+    :return: (S, B) median over receivers of each seed
+    """
+    return np.nanmedian(values, axis=1)
+
+
 def decay_over_seeds(config: Config, seeds: int, label: str = ''):
     """
     Run a config with seeds 1 .. seeds
-    :return: dict with t30, t20, edt arrays of shape (seeds, R, B)
+    :return: dict with t30, t20, edt, c50 arrays of shape (seeds, R, B)
     """
-    parameters = {'t30': [], 't20': [], 'edt': []}
+    parameters = {'t30': [], 't20': [], 'edt': [], 'c50': []}
     for seed in range(1, seeds + 1):
         decay = simulate(with_settings(config, seed=seed)).decay()
         for key, values in parameters.items():

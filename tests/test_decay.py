@@ -2,20 +2,13 @@ import numpy as np
 import pytest
 
 from gasim.analysis.decay import DYNAMIC_RANGE_MARGIN, decay_parameters, fit_decay, schroeder_curve
+from gasim.verification import exponential_decay
 
 DT = 1e-3
 
 
 def exponential(reverberation_time, depth_db=100.0, onset=0.0):
-    """
-    Energy histogram of a single-slope decay
-    :param reverberation_time: s
-    :param depth_db: Decay depth before the histogram ends, dB
-    :param onset: Empty time before the first arrival, s
-    """
-    k = np.arange(int(depth_db / 60 * reverberation_time / DT))
-    energy = np.exp(-np.log(1e6) * k * DT / reverberation_time)
-    return np.concatenate([np.zeros(round(onset / DT)), energy])
+    return exponential_decay(reverberation_time, depth_db, DT, onset)
 
 
 def test_schroeder_curve_of_an_exponential_is_a_line():
@@ -78,3 +71,20 @@ def test_shapes_follow_the_histogram():
     parameters = decay_parameters(energy, DT)
     assert parameters.t20.shape == (4, 3)
     np.testing.assert_allclose(parameters.t20[0], [0.5, 0.6, 0.7], rtol=1e-6)
+
+
+@pytest.mark.parametrize('reverberation_time', [0.5, 1.0, 2.0])
+def test_clarity_and_definition_of_an_exponential(reverberation_time):
+    # E(t) ~ exp(-13.8 t / T): the energy before 50 ms is 1 - q of the total, q = exp(-13.8 * 0.05 / T)
+    fine = 1e-5
+    k = np.arange(int(100 / 60 * reverberation_time / fine))
+    energy = np.concatenate([np.zeros(300), np.exp(-np.log(1e6) * k * fine / reverberation_time)])
+    q = np.exp(-np.log(1e6) * 0.05 / reverberation_time)
+    parameters = decay_parameters(energy, fine)
+    assert float(parameters.d50) == pytest.approx(1 - q, abs=1e-3)
+    assert float(parameters.c50) == pytest.approx(10 * np.log10((1 - q) / q), abs=0.01)
+
+
+def test_clarity_of_an_empty_curve_is_nan():
+    parameters = decay_parameters(np.zeros((2, 100)), DT)
+    assert np.all(np.isnan(parameters.c50)) and np.all(np.isnan(parameters.d50))

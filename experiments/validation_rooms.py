@@ -1,16 +1,23 @@
 """
-Validation rooms: new engine against the measurements and the thesis engine (paper Fig. 4 and Table 2).
+E1, field validation of the three rooms (paper Table 3, Fig. 6 and the receiver tables; docs/experiment-plan.md).
 
-    uv run python experiments/validation_rooms.py [--data ../data] [--seeds 5] [--rays-per-m3 100]
+    uv run python experiments/validation_rooms.py [--seeds 10] [--rays-per-m3 100] [--scenario-seeds 5]
 
-Needs the private models in models/private/ and the measured data outside the repository
-(data/measured/<room>.csv, data/thesis_simulated/<room>.csv, see data/README.md there). Materials are
-those of configs/<room>.toml. Writes summary.csv, receivers.csv and validation.png to --output.
+Base cases use only the documented inputs (configs/<room>_paper.toml: Appendix A materials, alpha_d used
+directly, ISO 9613-1 air at 20 degC / 50 % RH). Every case is run with --seeds seeds; the room value of a
+run is the median over receivers, reported as mean, standard deviation and range over the seeds. The
+undocumented scattering coefficient is shown as a band: the room is rerun with a uniform scattering
+coefficient at both ends of SCATTERING_RANGE (--scenario-seeds seeds each). Sabine and Eyring from the
+same model and inputs are the baselines. Measured room values are the mean over positions with a 95 %
+confidence interval; errors are given in % and in JND (5 %).
+
+Needs the private models (models/private/) and the measured data outside the repository (../data, see
+its README). Writes summary.csv, receivers.csv, validation.png and run_info.json to --output.
 """
 import argparse
-import dataclasses
 import math
 import sys
+import time
 from pathlib import Path
 
 import matplotlib
@@ -18,127 +25,192 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 
-from gasim.air import energy_attenuation, speed_of_sound
-from gasim.analysis.statistical import eyring
 from gasim.bands import OCTAVE_BANDS
 from gasim.config import load_config
 from gasim.geometry import load_room
-from gasim.simulate import simulate
 
-from _common import BAND_LABELS, cell, read_receiver_table, write_csv
+from _common import (
+    BAND_LABELS,
+    COLOURS,
+    cell,
+    decay_over_seeds,
+    eyring_of,
+    read_receiver_table,
+    room_value,
+    sabine_of,
+    with_decay_time,
+    with_materials,
+    with_settings,
+    write_csv,
+    write_run_info,
+)
 
-ROOMS = {'classroom': 'Classroom', 'lecture_hall': 'Lecture hall', 'mf_hall': 'Multifunction hall'}
-JND = 5.0  # %, just-noticeable difference of reverberance (ISO 3382-1)
+# case: (title, config, stem of the data files)
+CASES = {'classroom': ('Classroom', 'configs/classroom_paper.toml', 'classroom'),
+         'lecture_hall': ('Lecture hall', 'configs/lecture_hall_paper.toml', 'lecture_hall'),
+         'mf_hall': ('Multifunction hall', 'configs/mf_hall_paper.toml', 'mf_hall')}
+# Uniform scattering coefficients bounding the undocumented scattering (experiment plan, Sect. 3 and 6)
+SCATTERING_RANGE = {'classroom': (0.05, 0.40), 'lecture_hall': (0.05, 0.40), 'mf_hall': (0.01, 0.40)}
+JND = 0.05  # T30, ISO 3382-1
 
 
-def run_room(name: str, seeds: int, rays_per_m3: float):
+def uniform_scattering(config, scattering: float):
     """
-    Simulate one room with several seeds
-    :return: dict with T30/T20/EDT arrays (S, R, B), Eyring (B,), rays and volume
+    :return: Config with the same absorption and one scattering coefficient on every surface
     """
-    config = load_config(f'configs/{name}.toml')
+    materials = config.materials
+    return with_materials(config, {name: {'absorption': materials.absorption[m].tolist(), 'scattering': scattering}
+                                   for m, name in enumerate(materials.names)})
+
+
+def run_case(config, seeds: int, rays_per_m3: float, label: str):
+    """
+    Run one config with seeds 1 .. seeds at a ray density, long enough for a 70 dB decay of the slowest band
+    :return: dict with t30, t20, edt, c50 arrays (S, R, B) and the rays used
+    """
     room, _ = load_room(config)
+    config = with_decay_time(config)
     rays = math.ceil(rays_per_m3 * room.volume)
-    parameters = {'t30': [], 't20': [], 'edt': []}
-    for seed in range(1, seeds + 1):
-        settings = dataclasses.replace(config.simulation, rays=rays, seed=seed)
-        decay = simulate(dataclasses.replace(config, simulation=settings)).decay()
-        for key, values in parameters.items():
-            values.append(getattr(decay, key))
-        print(f"  {name}: seed {seed}/{seeds} done", flush=True)
-    air = config.air
-    reference = eyring(room, speed_of_sound(air.temperature), energy_attenuation(air.temperature, air.humidity,
-                                                                                  air.pressure))
-    return {**{key: np.array(value) for key, value in parameters.items()}, 'eyring': reference, 'rays': rays,
-            'volume': room.volume, 'ism_order': config.simulation.ism_order}
+    result = decay_over_seeds(with_settings(config, rays=rays), seeds, label)
+    return {**result, 'rays': rays, 'max_time': config.simulation.max_time, 'volume': room.volume}
 
 
-def relative_error(simulated, measured):
-    return 100 * (simulated - measured) / measured
+def measured_statistics(table):
+    """
+    :param table: (R, B) measured values per position, or None
+    :return: Mean (B,), half-width of the 95 % confidence interval (B,); None if there are no data
+    """
+    if table is None:
+        return None, None
+    n = np.sum(np.isfinite(table), axis=0)
+    mean = np.nanmean(table, axis=0)
+    spread = np.nanstd(table, axis=0, ddof=1) if len(table) > 1 else np.full_like(mean, np.nan)
+    return mean, stats.t.ppf(0.975, np.maximum(n - 1, 1)) * spread / np.sqrt(n)
+
+
+def standardised_rmse(simulated, measured):
+    """
+    JND-standardised RMS error over receivers, sqrt(mean(e_i^2)) / JND, for every seed and band
+    :param simulated: (S, R, B); measured: (R, B)
+    :return: (S, B)
+    """
+    errors = (simulated - measured[None]) / measured[None]
+    return np.sqrt(np.nanmean(errors ** 2, axis=1)) / JND
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--data', default='../data', help='folder with measured/ and thesis_simulated/')
-    parser.add_argument('--seeds', type=int, default=5)
+    parser.add_argument('--seeds', type=int, default=10)
     parser.add_argument('--rays-per-m3', type=float, default=100.0)
+    parser.add_argument('--scenario-seeds', type=int, default=5, help='seeds per end of the scattering band')
+    parser.add_argument('--no-scattering-band', action='store_true', help='skip the scattering scenarios')
+    parser.add_argument('--cases', nargs='+', choices=list(CASES), default=list(CASES))
     parser.add_argument('--output', default='output/experiments/validation')
     args = parser.parse_args(argv)
     data, output = Path(args.data), Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
+    started = time.time()
 
     summary, receivers, results = [], [], {}
-    for name, title in ROOMS.items():
-        if not load_config(f'configs/{name}.toml').model.exists():
-            print(f"skip {name}: private model not available")
+    for case in args.cases:
+        title, config_path, stem = CASES[case]
+        config = load_config(config_path)
+        if not config.model.exists():
+            print(f"skip {case}: private model not available")
             continue
-        measured = read_receiver_table(data / 'measured' / f'{name}.csv')
-        thesis = read_receiver_table(data / 'thesis_simulated' / f'{name}.csv')
-        run = run_room(name, args.seeds, args.rays_per_m3)
-        results[name] = (title, measured, thesis, run)
+        measured = read_receiver_table(data / 'measured' / f'{stem}.csv')
+        measured_mean, measured_ci = measured_statistics(measured)
+        thesis = read_receiver_table(data / 'thesis_simulated' / f'{stem}.csv')
+        base = run_case(config, args.seeds, args.rays_per_m3, case)
+        band = None
+        if not args.no_scattering_band:
+            band = np.array([room_value(run_case(uniform_scattering(config, s), args.scenario_seeds,
+                                                 args.rays_per_m3, f'{case} s = {s}')['t30']).mean(axis=0)
+                             for s in SCATTERING_RANGE[case]])
+        sabine, eyring = sabine_of(config), eyring_of(config)
+        t30 = room_value(base['t30'])  # (S, B)
+        results[case] = (title, measured_mean, measured_ci, thesis, t30, band, sabine, eyring)
 
-        t30 = run['t30'].mean(axis=0)  # (R, B) mean over seeds
-        room_mean_per_seed = run['t30'].mean(axis=1)  # (S, B)
-        for b, band in enumerate(OCTAVE_BANDS):
-            row = {'room': name, 'band': int(band), 'rays': run['rays'], 'volume': round(run['volume'], 1),
-                   'new_t30': t30[:, b].mean(), 'new_seed_std': room_mean_per_seed[:, b].std(ddof=1)
-                   if args.seeds > 1 else float('nan'),
-                   'new_t20': run['t20'].mean(axis=(0, 1))[b], 'new_edt': run['edt'].mean(axis=(0, 1))[b],
-                   'eyring': run['eyring'][b]}
-            if measured is not None:
-                row['measured'] = measured[:, b].mean()
-                row['error_new_pct'] = relative_error(row['new_t30'], row['measured'])
-                if len(measured) == len(t30):
-                    row['max_receiver_error_new_pct'] = np.abs(relative_error(t30[:, b], measured[:, b])).max()
+        srmse = (standardised_rmse(base['t30'], measured) if measured is not None
+                 and measured.shape[0] == base['t30'].shape[1] else None)
+        reference_srmse = standardised_rmse(np.broadcast_to(measured_mean, measured.shape)[None], measured)[0] \
+            if srmse is not None else None
+        for b, frequency in enumerate(OCTAVE_BANDS):
+            row = {'case': case, 'band': int(frequency), 'rays': base['rays'], 'seeds': args.seeds,
+                   't30_mean': t30[:, b].mean(),
+                   't30_sd': t30[:, b].std(ddof=1) if args.seeds > 1 else float('nan'),
+                   't30_min': t30[:, b].min(), 't30_max': t30[:, b].max(),
+                   't20_mean': room_value(base['t20'])[:, b].mean(), 'edt_mean': room_value(base['edt'])[:, b].mean(),
+                   'c50_mean': room_value(base['c50'])[:, b].mean(), 'sabine': sabine[b], 'eyring': eyring[b]}
+            if band is not None:
+                row.update({f't30_s{s:g}': band[i, b] for i, s in enumerate(SCATTERING_RANGE[case])})
+            if measured_mean is not None:
+                row.update({'measured': measured_mean[b], 'measured_ci95': measured_ci[b]})
+                for name in ('t30_mean', 'sabine', 'eyring'):
+                    row[f'error_{name.split("_")[0]}_pct'] = 100 * (row[name] / measured_mean[b] - 1)
+                row['error_t30_jnd'] = row['error_t30_pct'] / (100 * JND)
+            if srmse is not None:
+                row.update({'srmse_jnd': srmse[:, b].mean(), 'srmse_reference_jnd': reference_srmse[b]})
             if thesis is not None:
                 row['thesis'] = thesis[:, b].mean()
-                if measured is not None:
-                    row['error_thesis_pct'] = relative_error(row['thesis'], row['measured'])
             summary.append(row)
-            for r in range(len(t30)):
-                receivers.append({'room': name, 'receiver': r + 1, 'band': int(band), 'new_t30': t30[r, b],
-                                  'measured': measured[r, b] if measured is not None and r < len(measured) else '',
-                                  'thesis': thesis[r, b] if thesis is not None and r < len(thesis) else ''})
+            for r in range(base['t30'].shape[1]):
+                receivers.append({'case': case, 'receiver': r + 1, 'band': int(frequency),
+                                  't30_mean': np.nanmean(base['t30'][:, r, b]),
+                                  't30_sd': np.nanstd(base['t30'][:, r, b], ddof=1) if args.seeds > 1 else '',
+                                  'measured': measured[r, b] if measured is not None and r < len(measured) else ''})
 
     write_csv(output / 'summary.csv', summary)
     write_csv(output / 'receivers.csv', receivers)
     plot(results, output / 'validation.png')
+    write_run_info(output, started, cases={c: CASES[c][1] for c in args.cases}, seeds=args.seeds,
+                   rays_per_m3=args.rays_per_m3, scenario_seeds=args.scenario_seeds,
+                   scattering_range={c: SCATTERING_RANGE[c] for c in args.cases} if not args.no_scattering_band
+                   else None)
     print_summary(summary)
-    print(f"\nWrote {output / 'summary.csv'}, {output / 'receivers.csv'}, {output / 'validation.png'}")
+    print(f"\nWrote {output}")
     return 0
 
 
 def print_summary(summary):
-    print(f"\n{'room':<13}{'band':>6}{'measured':>10}{'thesis':>8}{'new T30':>9}{'±seed':>7}{'Eyring':>8}"
-          f"{'err thesis':>12}{'err new':>9}{'JND new':>9}")
+    print(f"\n{'case':<13}{'band':>6}{'meas':>7}{'±CI':>6}{'T30':>7}{'±sd':>7}{'T20':>7}{'EDT':>7}{'Sabine':>8}"
+          f"{'Eyring':>8}{'err %':>8}{'JND':>6}{'sRMSE':>7}")
     for row in summary:
-        jnd = abs(row['error_new_pct']) / JND if 'error_new_pct' in row else float('nan')
-        print(f"{row['room']:<13}{row['band']:>6}{cell(row, 'measured', 10)}{cell(row, 'thesis', 8)}"
-              f"{cell(row, 'new_t30', 9)}{cell(row, 'new_seed_std', 7, '.3f')}{cell(row, 'eyring', 8)}"
-              f"{cell(row, 'error_thesis_pct', 11, '+.1f')}%{cell(row, 'error_new_pct', 8, '+.1f')}%{jnd:>9.1f}")
+        print(f"{row['case']:<13}{row['band']:>6}{cell(row, 'measured', 7)}{cell(row, 'measured_ci95', 6)}"
+              f"{cell(row, 't30_mean', 7)}{cell(row, 't30_sd', 7, '.3f')}{cell(row, 't20_mean', 7)}"
+              f"{cell(row, 'edt_mean', 7)}{cell(row, 'sabine', 8)}{cell(row, 'eyring', 8)}"
+              f"{cell(row, 'error_t30_pct', 8, '+.1f')}{cell(row, 'error_t30_jnd', 6, '+.1f')}"
+              f"{cell(row, 'srmse_jnd', 7, '.1f')}")
 
 
 def plot(results, path: Path):
-    fig, axes = plt.subplots(1, max(len(results), 1), figsize=(4.2 * max(len(results), 1), 3.6), squeeze=False)
+    n = max(len(results), 1)
+    fig, axes = plt.subplots(1, n, figsize=(4.2 * n, 3.8), squeeze=False)
     x = np.arange(len(OCTAVE_BANDS))
-    for ax, (name, (title, measured, thesis, run)) in zip(axes[0], results.items()):
+    for ax, (title, measured, ci, thesis, t30, band, sabine, eyring) in zip(axes[0], results.values()):
+        if band is not None:
+            ax.fill_between(x, band.min(axis=0), band.max(axis=0), color=COLOURS['new'], alpha=0.15, lw=0,
+                            label='Scattering range')
         if measured is not None:
-            ax.fill_between(x, measured.min(axis=0), measured.max(axis=0), color='#1f3b73', alpha=0.15, lw=0)
-            ax.plot(x, measured.mean(axis=0), 'o-', color='#1f3b73', label='Measured')
+            ax.errorbar(x, measured, yerr=ci, fmt='o-', color=COLOURS['measured'], capsize=3, label='Measured (95% CI)')
         if thesis is not None:
-            ax.plot(x, thesis.mean(axis=0), 's--', color='#c0392b', label='Thesis engine')
-        t30 = run['t30'].mean(axis=1)  # (S, B) room mean per seed
+            ax.plot(x, thesis.mean(axis=0), 's--', color=COLOURS['thesis'], ms=4, label='Thesis code')
         ax.errorbar(x, t30.mean(axis=0), yerr=t30.std(axis=0, ddof=1) if len(t30) > 1 else None, fmt='^-',
-                    color='#1e8449', capsize=3, label='New engine')
-        ax.plot(x, run['eyring'], ':', color='grey', label='Eyring')
+                    color=COLOURS['new'], capsize=3, label='gasim T30 (mean ± sd over seeds)')
+        ax.plot(x, sabine, ':', color=COLOURS['eyring'], label='Sabine')
+        ax.plot(x, eyring, '--', color=COLOURS['eyring'], lw=0.8, label='Eyring')
         ax.set_xticks(x, BAND_LABELS)
         ax.set_xlabel('Octave band (Hz)')
-        ax.set_title(f"{title}, {run['volume']:.0f} m$^3$", fontsize=10)
+        ax.set_title(title, fontsize=10)
+        ax.set_ylim(bottom=0)
         ax.grid(alpha=0.3)
-    axes[0][0].set_ylabel('T30 (s)')
-    axes[0][0].legend(fontsize=8)
-    fig.tight_layout()
+    axes[0][0].set_ylabel('Reverberation time (s)')
+    handles = {label: handle for ax in axes[0] for handle, label in zip(*ax.get_legend_handles_labels())}
+    fig.legend(handles.values(), handles.keys(), loc='lower center', ncol=4, fontsize=7, frameon=False)
+    fig.tight_layout(rect=(0, 0.1, 1, 1))
     fig.savefig(path, dpi=200)
     plt.close(fig)
 

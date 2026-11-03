@@ -14,6 +14,7 @@ from gasim.materials import material_table
 from gasim.propagation.hybrid import hybrid
 from gasim.propagation.image_sources import find_image_sources
 from gasim.propagation.rays import trace_rays
+from gasim.verification import image_lattice
 
 C = 343.0
 NO_AIR = np.zeros(6)
@@ -29,19 +30,7 @@ def shoebox(absorption=0.2, scattering=0.1, receivers=RECEIVERS, size=SIZE):
 
 
 def lattice_lengths(receiver, max_order, size=SIZE, source=SOURCE):
-    """
-    Path lengths of all images of a rectangular room up to max_order (Allen & Berkley 1979)
-    """
-    lengths, orders = [], []
-    span = range(-max_order, max_order + 1)
-    for index in ((i, j, k) for i in span for j in span for k in span):
-        order = sum(abs(i) for i in index)
-        if order > max_order:
-            continue
-        image = [i * length + s if i % 2 == 0 else (i + 1) * length - s for i, length, s in zip(index, size, source)]
-        lengths.append(np.linalg.norm(np.array(image) - receiver))
-        orders.append(order)
-    return np.array(lengths), np.array(orders)
+    return image_lattice(size, source, receiver, max_order)
 
 
 def settings(**values):
