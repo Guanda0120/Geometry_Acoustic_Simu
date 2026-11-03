@@ -15,7 +15,6 @@ Needs the private models (models/private/) and the measured data outside the rep
 its README). Writes summary.csv, receivers.csv, validation.png and run_info.json to --output.
 """
 import argparse
-import math
 import sys
 import time
 from pathlib import Path
@@ -25,69 +24,29 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import stats
 
 from gasim.bands import OCTAVE_BANDS
 from gasim.config import load_config
-from gasim.geometry import load_room
 
 from _common import (
     BAND_LABELS,
     COLOURS,
+    JND,
+    PAPER_ROOMS,
+    SCATTERING_RANGE,
     cell,
-    decay_over_seeds,
     eyring_of,
+    measured_statistics,
     read_receiver_table,
     room_value,
+    run_seeds,
     sabine_of,
-    with_decay_time,
-    with_materials,
-    with_settings,
+    uniform_scattering,
     write_csv,
     write_run_info,
 )
 
-# case: (title, config, stem of the data files)
-CASES = {'classroom': ('Classroom', 'configs/classroom_paper.toml', 'classroom'),
-         'lecture_hall': ('Lecture hall', 'configs/lecture_hall_paper.toml', 'lecture_hall'),
-         'mf_hall': ('Multifunction hall', 'configs/mf_hall_paper.toml', 'mf_hall')}
-# Uniform scattering coefficients bounding the undocumented scattering (experiment plan, Sect. 3 and 6)
-SCATTERING_RANGE = {'classroom': (0.05, 0.40), 'lecture_hall': (0.05, 0.40), 'mf_hall': (0.01, 0.40)}
-JND = 0.05  # T30, ISO 3382-1
-
-
-def uniform_scattering(config, scattering: float):
-    """
-    :return: Config with the same absorption and one scattering coefficient on every surface
-    """
-    materials = config.materials
-    return with_materials(config, {name: {'absorption': materials.absorption[m].tolist(), 'scattering': scattering}
-                                   for m, name in enumerate(materials.names)})
-
-
-def run_case(config, seeds: int, rays_per_m3: float, label: str):
-    """
-    Run one config with seeds 1 .. seeds at a ray density, long enough for a 70 dB decay of the slowest band
-    :return: dict with t30, t20, edt, c50 arrays (S, R, B) and the rays used
-    """
-    room, _ = load_room(config)
-    config = with_decay_time(config)
-    rays = math.ceil(rays_per_m3 * room.volume)
-    result = decay_over_seeds(with_settings(config, rays=rays), seeds, label)
-    return {**result, 'rays': rays, 'max_time': config.simulation.max_time, 'volume': room.volume}
-
-
-def measured_statistics(table):
-    """
-    :param table: (R, B) measured values per position, or None
-    :return: Mean (B,), half-width of the 95 % confidence interval (B,); None if there are no data
-    """
-    if table is None:
-        return None, None
-    n = np.sum(np.isfinite(table), axis=0)
-    mean = np.nanmean(table, axis=0)
-    spread = np.nanstd(table, axis=0, ddof=1) if len(table) > 1 else np.full_like(mean, np.nan)
-    return mean, stats.t.ppf(0.975, np.maximum(n - 1, 1)) * spread / np.sqrt(n)
+CASES = PAPER_ROOMS
 
 
 def standardised_rmse(simulated, measured):
@@ -124,10 +83,10 @@ def main(argv=None):
         measured = read_receiver_table(data / 'measured' / f'{stem}.csv')
         measured_mean, measured_ci = measured_statistics(measured)
         thesis = read_receiver_table(data / 'thesis_simulated' / f'{stem}.csv')
-        base = run_case(config, args.seeds, args.rays_per_m3, case)
+        base = run_seeds(config, args.seeds, args.rays_per_m3, case)
         band = None
         if not args.no_scattering_band:
-            band = np.array([room_value(run_case(uniform_scattering(config, s), args.scenario_seeds,
+            band = np.array([room_value(run_seeds(uniform_scattering(config, s), args.scenario_seeds,
                                                  args.rays_per_m3, f'{case} s = {s}')['t30']).mean(axis=0)
                              for s in SCATTERING_RANGE[case]])
         sabine, eyring = sabine_of(config), eyring_of(config)

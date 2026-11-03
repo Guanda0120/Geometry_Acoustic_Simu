@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from scipy import stats
 
 from gasim import __version__
 from gasim.air import energy_attenuation, speed_of_sound
@@ -26,6 +27,14 @@ TEST_ROOM_FLOOR = [0.15, 0.30, 0.40, 0.75, 0.85, 0.70]  # carpet, layer Mat
 TEST_ROOM_CEILING = [0.01, 0.02, 0.05, 0.10, 0.15, 0.20]  # gypsum board, layer Plaster
 TEST_ROOM_SCATTERING_WALLS_ABSORPTION = [0.10, 0.20, 0.10, 0.20, 0.30, 0.40]  # walls in the scattering sweep
 SWEEP_VALUES = [0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 0.90, 0.99]
+
+# The three measured rooms with their documented inputs: case -> (title, config, stem of the data files)
+PAPER_ROOMS = {'classroom': ('Classroom', 'configs/classroom_paper.toml', 'classroom'),
+               'lecture_hall': ('Lecture hall', 'configs/lecture_hall_paper.toml', 'lecture_hall'),
+               'mf_hall': ('Multifunction hall', 'configs/mf_hall_paper.toml', 'mf_hall')}
+# Uniform scattering coefficients bounding the undocumented scattering (docs/experiment-plan.md, Sect. 3)
+SCATTERING_RANGE = {'classroom': (0.05, 0.40), 'lecture_hall': (0.05, 0.40), 'mf_hall': (0.01, 0.40)}
+JND = 0.05  # T30, T20 and EDT (ISO 3382-1)
 
 
 def read_receiver_table(path: Path):
@@ -82,6 +91,23 @@ def with_settings(config: Config, **changes):
     return dataclasses.replace(config, simulation=dataclasses.replace(config.simulation, **changes))
 
 
+def material_spec(config: Config):
+    """
+    :return: The [materials] table of a config as a dict, to be changed and passed to with_materials
+    """
+    materials = config.materials
+    return {name: {'absorption': materials.absorption[m].tolist(), 'scattering': materials.scattering[m].tolist()}
+            for m, name in enumerate(materials.names)}
+
+
+def uniform_scattering(config: Config, scattering: float):
+    """
+    :return: Config with the same absorption and one scattering coefficient on every surface
+    """
+    return with_materials(config, {name: {**entry, 'scattering': scattering}
+                                   for name, entry in material_spec(config).items()})
+
+
 def with_materials(config: Config, spec: dict):
     """
     :param spec: [materials] table as in a TOML config
@@ -131,6 +157,31 @@ def with_decay_time(config: Config):
     """
     longest = float(np.max(eyring_of(config)))
     return with_settings(config, max_time=min(12.0, max(config.simulation.max_time, 1.5 * longest * 70 / 60)))
+
+
+def run_seeds(config: Config, seeds: int, rays_per_m3: float, label: str = ''):
+    """
+    Run a config with seeds 1 .. seeds at a ray density, traced long enough (with_decay_time); the same
+    seeds for every config give paired runs whose differences are free of most of the Monte Carlo noise
+    :return: dict with t30, t20, edt, c50 arrays (S, R, B), the rays and the trace length used
+    """
+    room, _ = load_room(config)
+    config = with_settings(with_decay_time(config), rays=math.ceil(rays_per_m3 * room.volume))
+    result = decay_over_seeds(config, seeds, label)
+    return {**result, 'rays': config.simulation.rays, 'max_time': config.simulation.max_time, 'volume': room.volume}
+
+
+def measured_statistics(table):
+    """
+    :param table: (R, B) measured values per position, or None
+    :return: Mean (B,), half-width of the 95 % confidence interval (B,); None, None if there are no data
+    """
+    if table is None:
+        return None, None
+    n = np.sum(np.isfinite(table), axis=0)
+    mean = np.nanmean(table, axis=0)
+    spread = np.nanstd(table, axis=0, ddof=1) if len(table) > 1 else np.full_like(mean, np.nan)
+    return mean, stats.t.ppf(0.975, np.maximum(n - 1, 1)) * spread / np.sqrt(n)
 
 
 def room_value(values: np.ndarray):

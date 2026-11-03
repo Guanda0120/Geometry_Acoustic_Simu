@@ -77,6 +77,8 @@ Experiments for the paper live in `experiments/`, one script per figure or table
 uv run python experiments/verification.py                    # E0: known-answer checks V1-V8 (paper Table 2), ~1 min, no private data
 uv run python experiments/validation_rooms.py                # E1: three rooms vs measurement, Sabine/Eyring, scattering band (Table 3)
 uv run python experiments/ray_count.py                       # E2: convergence with the ray density in the three rooms
+uv run python experiments/input_sensitivity.py               # E3: error budget, one input at a time (materials, scattering, air)
+uv run python experiments/scenarios.py                       # E4: seats, low-frequency glazing, scattering as labelled assumptions
 uv run python experiments/surface_statistics.py              # E5: reflections and energy per surface of the hall (Fig. 8/9), ~1 min
 uv run python experiments/wall_sweep.py absorption --seeds 5 # E7: wall absorption sweep in the test room (supplement), ~30 s
 uv run python experiments/wall_sweep.py scattering --seeds 5 # E7: wall scattering sweep, ~30 s
