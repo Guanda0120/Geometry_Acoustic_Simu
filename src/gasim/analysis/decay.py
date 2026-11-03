@@ -2,7 +2,8 @@
 Decay curves and reverberation parameters after ISO 3382-1/-2.
 
 Input is an energy histogram: energy per time bin, time along the last axis. The decay curve is the
-Schroeder backward integral, evaluated from the first bin that holds energy (the direct sound).
+Schroeder backward integral, evaluated from the first bin that holds energy (the direct sound). Clarity
+C50 and definition D50 split the energy 50 ms after that bin.
 """
 from dataclasses import dataclass
 
@@ -14,6 +15,7 @@ EVALUATION_RANGES = {'EDT': (0.0, -10.0), 'T20': (-5.0, -25.0), 'T30': (-5.0, -3
 # bend the fitted part: a single-slope decay truncated 10 dB below the range gives T30 0.85 % short,
 # 15 dB below gives 0.3 % (ISO 3382-2 asks 10 dB above the noise floor for measurements)
 DYNAMIC_RANGE_MARGIN = 15.0  # dB
+EARLY_LIMIT = 0.05  # s, early/late limit of C50 and D50 (ISO 3382-1, speech)
 
 
 def schroeder_curve(energy: np.ndarray):
@@ -88,6 +90,8 @@ class DecayParameters:
     t30: np.ndarray  # s
     xi_t20: np.ndarray  # per mille
     xi_t30: np.ndarray  # per mille
+    c50: np.ndarray = None  # dB, clarity
+    d50: np.ndarray = None  # -, definition
 
     @property
     def curvature(self):
@@ -97,9 +101,33 @@ class DecayParameters:
         return 100 * (self.t30 / self.t20 - 1)
 
 
+def early_to_late(energy: np.ndarray, time_step: float, limit: float = EARLY_LIMIT):
+    """
+    Clarity and definition of every curve, with the limit counted from the first bin with energy; with a
+    histogram the limit falls on a bin edge, so the split is exact to within one bin
+    :param energy: (..., K) energy per time bin
+    :param limit: Early/late limit, s
+    :return: C in dB, D as a fraction, arrays of shape energy.shape[:-1]; nan for empty curves
+    """
+    energy = np.asarray(energy, dtype=float)
+    curves = energy.reshape(-1, energy.shape[-1])
+    early_bins = round(limit / time_step)
+    clarity, definition = np.full(len(curves), np.nan), np.full(len(curves), np.nan)
+    for i, curve in enumerate(curves):
+        filled = np.flatnonzero(curve > 0)
+        if filled.size == 0:
+            continue
+        early = curve[filled[0]:filled[0] + early_bins].sum()
+        total = curve[filled[0]:].sum()
+        definition[i] = early / total
+        with np.errstate(divide='ignore'):
+            clarity[i] = 10 * np.log10(early / (total - early))
+    return clarity.reshape(energy.shape[:-1]), definition.reshape(energy.shape[:-1])
+
+
 def decay_parameters(energy: np.ndarray, time_step: float):
     """
-    EDT, T20 and T30 of every decay curve in a histogram
+    EDT, T20, T30, C50 and D50 of every decay curve in a histogram
     :param energy: (..., K) energy per time bin, e.g. (receivers, bands, bins)
     :param time_step: Bin width, s
     :return: DecayParameters
@@ -112,8 +140,10 @@ def decay_parameters(energy: np.ndarray, time_step: float):
     def collect(name, attribute):
         return np.array([getattr(fit, attribute) for fit in fits[name]]).reshape(energy.shape[:-1])
 
+    c50, d50 = early_to_late(energy, time_step)
     return DecayParameters(edt=collect('EDT', 'value'),
                            t20=collect('T20', 'value'),
                            t30=collect('T30', 'value'),
                            xi_t20=collect('T20', 'nonlinearity'),
-                           xi_t30=collect('T30', 'nonlinearity'))
+                           xi_t30=collect('T30', 'nonlinearity'),
+                           c50=c50, d50=d50)

@@ -71,18 +71,19 @@ Write the image-source paths of a receiver to Rhino, one layer per reflection or
 uv run gasim paths output/test_room/result.npz paths.3dm --receiver 1 --max-order 2
 ```
 
-Experiments for the paper live in `experiments/`. They need the private models and the measured data kept outside the repository (`../data`, see its README):
+Experiments for the paper live in `experiments/`, one script per figure or table, following [docs/experiment-plan.md](docs/experiment-plan.md) (E0–E7). Except for E0 and the test-room sweeps they need the private models and the measured data kept outside the repository (`../data`, see its README):
 
 ```bash
-uv run python experiments/validation_rooms.py --seeds 5     # paper Fig. 4: three rooms vs measurement and thesis engine, ~4 min
-uv run python experiments/wall_sweep.py absorption --seeds 5 # paper Fig. 6: wall absorption sweep in the test room vs CATT, ~30 s
-uv run python experiments/wall_sweep.py scattering --seeds 5 # paper Fig. 7: wall scattering sweep, ~30 s
-uv run python experiments/ray_count.py --seeds 10            # paper Fig. 5: T30 vs rays per m3 in the classroom, ~30 s
+uv run python experiments/verification.py                    # E0: known-answer checks V1-V8 (paper Table 2), ~1 min, no private data
+uv run python experiments/validation_rooms.py                # E1: three rooms vs measurement, Sabine/Eyring, scattering band (Table 3)
+uv run python experiments/ray_count.py                       # E2: convergence with the ray density in the three rooms
+uv run python experiments/surface_statistics.py              # E5: reflections and energy per surface of the hall (Fig. 8/9), ~1 min
+uv run python experiments/wall_sweep.py absorption --seeds 5 # E7: wall absorption sweep in the test room (supplement), ~30 s
+uv run python experiments/wall_sweep.py scattering --seeds 5 # E7: wall scattering sweep, ~30 s
 uv run python experiments/material_sources.py --seeds 3      # run-config vs paper-appendix materials, renovated hall
-uv run python experiments/surface_statistics.py              # paper Fig. 9: reflections and energy per surface of the hall, ~1 min
 ```
 
-Each writes CSV tables and a figure to `output/experiments/<name>/`. The sweeps and the ray-count script also run without the private data (test room; no CATT or thesis curves).
+Each writes CSV tables, a figure and `run_info.json` (command, git commit, seeds, run time) to `output/experiments/<name>/`. Room values are medians over receivers; seeds give the mean and spread.
 
 Thesis engine (Python configs): `uv run gasim run configs/legacy/test_room.py` writes decay plots, impulse responses (`.wav`) and pickled receivers to the config's `output_folder`; `gasim eyring` and `gasim export-paths` work on its configs and pickles.
 

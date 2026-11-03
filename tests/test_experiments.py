@@ -13,8 +13,10 @@ NEEDS_DATA = pytest.mark.skipif(not Path('models/private/Real_ClassRoom.3dm').ex
 def test_validation_rooms_runs(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend('experiments')
     from validation_rooms import main
-    assert main(['--seeds', '1', '--rays-per-m3', '2', '--output', str(tmp_path)]) == 0
-    assert (tmp_path / 'summary.csv').exists() and (tmp_path / 'validation.png').exists()
+    assert main(['--seeds', '2', '--rays-per-m3', '2', '--no-scattering-band', '--cases', 'classroom',
+                 '--output', str(tmp_path)]) == 0
+    for name in ('summary.csv', 'receivers.csv', 'validation.png', 'run_info.json'):
+        assert (tmp_path / name).exists()
     sys.modules.pop('validation_rooms')
 
 
@@ -30,10 +32,18 @@ def test_wall_sweep_runs(tmp_path, monkeypatch):
 def test_ray_count_runs(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend('experiments')
     from ray_count import main
-    assert main(['--config', 'configs/test_room.toml', '--seeds', '2', '--densities', '1', '3',
+    assert main(['--configs', 'configs/test_room.toml', '--seeds', '2', '--densities', '1', '3',
                  '--output', str(tmp_path)]) == 0
-    assert (tmp_path / 'ray_count.csv').exists()
+    assert (tmp_path / 'ray_count_test_room.csv').exists() and (tmp_path / 'run_info.json').exists()
     sys.modules.pop('ray_count')
+
+
+def test_verification_runs(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from verification import main
+    main(['--quick', '--output', str(tmp_path)])  # quick runs may miss a stochastic criterion
+    assert (tmp_path / 'verification.csv').exists() and (tmp_path / 'verification.png').exists()
+    sys.modules.pop('verification')
 
 
 @pytest.mark.parametrize('room', ['classroom', 'lecture_hall', 'mf_hall'])

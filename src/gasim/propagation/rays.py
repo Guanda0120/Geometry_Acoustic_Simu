@@ -80,6 +80,19 @@ def _lambert(nx, ny, nz, u1, u2):
 
 
 @njit(cache=True)
+def rain_fraction(cos_theta, radius, distance):
+    """
+    Share of the energy scattered by a Lambert surface element that reaches a sphere (Schroeder 2011, Eq. 5.20)
+    :param cos_theta: Cosine between the surface normal and the direction to the sphere centre
+    :param radius: Sphere radius, m
+    :param distance: Distance from the surface element to the sphere centre, m (> radius)
+    :return: 2 cos(theta) (1 - cos(gamma)), sin(gamma) = radius / distance
+    """
+    cos_gamma = math.sqrt(1.0 - (radius / distance) ** 2)
+    return 2.0 * cos_theta * (1.0 - cos_gamma)
+
+
+@njit(cache=True)
 def _deposit(histogram, received, receiver, k, energy, factor, path, attenuation, surface):
     """
     Add energy * factor * exp(-m path) of every band to bin k of a receiver, and to the energy received
@@ -180,11 +193,10 @@ def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v
                 t_block, _ = first_hit(ox, oy, oz, vx / distance, vy / distance, vz / distance, v0, e1, e2)
                 if t_block < distance:
                     continue
-                cos_gamma = math.sqrt(1.0 - (radius / distance) ** 2)
                 path = length + distance
                 k = int(path / bin_length)
                 if k < n_bins:
-                    geometric = 2.0 * cos_theta * (1.0 - cos_gamma) * inv_area
+                    geometric = rain_fraction(cos_theta, radius, distance) * inv_area
                     for b in range(n_bands):
                         value = (energy[b] * (1.0 - absorption[m, b]) * diffuse_probability[m] * geometric
                                  * math.exp(-attenuation[b] * path))
