@@ -3,6 +3,8 @@ import csv
 import dataclasses
 import json
 import math
+import os
+import platform
 import subprocess
 import sys
 import time
@@ -136,7 +138,7 @@ def sabine_of(config: Config):
 
 def write_run_info(output: Path, started: float, **extra):
     """
-    Write run_info.json next to the results: command line, gasim version, git commit, run time
+    Write run_info.json next to the results: command line, gasim version, git commit, run time, platform
     :param started: time.time() at the start of the run
     :param extra: Further JSON-serialisable entries, e.g. configs and seeds
     """
@@ -145,8 +147,13 @@ def write_run_info(output: Path, started: float, **extra):
         dirty = bool(subprocess.run(['git', 'status', '--porcelain', 'src'], capture_output=True, text=True, check=False).stdout)
     except (OSError, subprocess.CalledProcessError):
         commit, dirty = None, None
+    import numba
     info = {'command': sys.argv, 'gasim_version': __version__, 'git_commit': commit, 'src_modified': dirty,
-            'finished': time.strftime('%Y-%m-%d %H:%M:%S'), 'seconds': round(time.time() - started, 1), **extra}
+            'finished': time.strftime('%Y-%m-%d %H:%M:%S'), 'seconds': round(time.time() - started, 1),
+            'platform': {'system': platform.platform(), 'machine': platform.machine(), 'cpus': os.cpu_count(),
+                         'numba_threads': numba.get_num_threads(), 'python': platform.python_version(),
+                         'numpy': np.__version__, 'numba': numba.__version__},
+            **extra}
     (output / 'run_info.json').write_text(json.dumps(info, indent=2, default=str))
 
 

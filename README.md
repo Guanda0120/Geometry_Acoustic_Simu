@@ -85,7 +85,7 @@ uv run python experiments/wall_sweep.py scattering --seeds 5 # E7: wall scatteri
 uv run python experiments/material_sources.py --seeds 3      # run-config vs paper-appendix materials, renovated hall
 ```
 
-Each writes CSV tables, a figure and `run_info.json` (command, git commit, seeds, run time) to `output/experiments/<name>/`. Room values are medians over receivers; seeds give the mean and spread.
+Each writes CSV tables, a figure and `run_info.json` (command, git commit, seeds, run time, platform) to `output/experiments/<name>/`. `experiments/run_batch.sh batch1|batch2|all|<script>...` runs them one after another at low priority, keeps a Mac awake, and logs every step to `output/experiments/progress.log`. Room values are medians over receivers; seeds give the mean and spread.
 
 Thesis engine (Python configs): `uv run gasim run configs/legacy/test_room.py` writes decay plots, impulse responses (`.wav`) and pickled receivers to the config's `output_folder`; `gasim eyring` and `gasim export-paths` work on its configs and pickles.
 
