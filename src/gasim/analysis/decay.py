@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from gasim import faults
+
 # Evaluation ranges in dB below the start of the decay curve
 EVALUATION_RANGES = {'EDT': (0.0, -10.0), 'T20': (-5.0, -25.0), 'T30': (-5.0, -35.0)}
 # The curve must continue this far below the evaluation range, so truncation of the response does not
@@ -64,6 +66,9 @@ def fit_decay(energy: np.ndarray, time_step: float, upper: float, lower: float):
         return DecayFit(nan, nan, nan, nan, nan, 'no energy')
     level = schroeder_curve(energy[filled[0]:filled[-1] + 1])
     time = np.arange(level.size) * time_step
+    if faults.on('F3') and (upper, lower) == EVALUATION_RANGES['T30']:
+        value = faults.thesis_reverberation_time(level, time_step)
+        return DecayFit(value, -60.0 / value if value > 0 else nan, nan, nan, nan)
     in_range = (level <= upper) & (level >= lower)
     if level[-1] > lower or in_range.sum() < 3:
         return DecayFit(nan, nan, nan, nan, nan, f'decay curve does not reach {lower:.0f} dB')

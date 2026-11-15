@@ -82,15 +82,19 @@ def test_surface_statistics_runs(tmp_path, monkeypatch):
     sys.modules.pop('surface_statistics')
 
 
-def test_budget_adds_independent_uncertainties_in_quadrature(monkeypatch):
+def test_budget_adds_the_downward_and_the_upward_changes_separately(monkeypatch):
     monkeypatch.syspath_prepend('experiments')
     from input_sensitivity import budget
     ones = np.ones(6)
     changes = {'alpha A': (-3 * ones, 2 * ones), 'alpha B': (4 * ones, -1 * ones),
                'scattering': (-12 * ones, 0 * ones), 'air': (-1 * ones, 2 * ones)}
     groups = budget(changes)
-    np.testing.assert_allclose(groups['materials'], 5.0)  # sqrt(3^2 + 4^2)
-    np.testing.assert_allclose(groups['total'], np.sqrt(5 ** 2 + 12 ** 2 + 2 ** 2))
+    down, up = groups['materials']
+    np.testing.assert_allclose(down, np.sqrt(3 ** 2 + 1 ** 2))
+    np.testing.assert_allclose(up, np.sqrt(2 ** 2 + 4 ** 2))
+    down, up = groups['total']
+    np.testing.assert_allclose(down, np.sqrt(3 ** 2 + 1 ** 2 + 12 ** 2 + 1 ** 2))
+    np.testing.assert_allclose(up, np.sqrt(2 ** 2 + 4 ** 2 + 0 ** 2 + 2 ** 2))  # scattering only shortens T30
     sys.modules.pop('input_sensitivity')
 
 

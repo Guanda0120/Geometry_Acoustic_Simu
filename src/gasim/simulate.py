@@ -1,6 +1,7 @@
 """One simulation run: config in, Result out."""
 import time
 
+from gasim import faults
 from gasim.air import energy_attenuation, speed_of_sound
 from gasim.analysis.surfaces import SurfaceStatistics
 from gasim.bands import OCTAVE_BANDS
@@ -38,7 +39,8 @@ def simulate(config: Config):
                             escaped_rays=rays.escaped_rays, reflections=rays.reflections,
                             speed_of_sound=c, air_attenuation=m.tolist(), volume=room.volume,
                             surface_area=room.surface_area, layers=list(room.poly_layer),
-                            surfaces=list(room.surface_names), poly_surface=room.poly_surface.tolist())
+                            surfaces=list(room.surface_names), poly_surface=room.poly_surface.tolist(),
+                            faults=sorted(faults.active()), stop_order=rays.stop_order)
     surfaces = SurfaceStatistics(
         names=room.surface_names, area=room.area_by_surface(),
         ism_reflections=reflections_by_surface(output.paths, room.poly_surface, len(room.receivers), room.n_surfaces),

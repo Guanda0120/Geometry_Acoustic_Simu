@@ -1,6 +1,9 @@
 # Experiment plan: rerunning the paper with the verified engine
 
-Status: draft for review (Guanda, Elsa). Nothing in this plan is run until the open decisions of §6 are settled.
+Status (2026-11-15): E0–E4 have been run (batch 1 on 2026-11-03, batch 2 on 2026-11-08). The E6 script is
+written and smoke-tested; its full run, E5 and E7 are outstanding. The decisions of §6 are marked as settled or
+open; the final numbers of the paper come from one rerun of all experiments at a tagged commit, after the open
+ones are settled.
 
 The thesis results and the numbers in the current manuscript were computed with the original code or with a patched
 version of it. This plan reruns every simulation of the paper with `gasim`, the rewritten and verified engine, in a
@@ -56,10 +59,10 @@ thesis Fig. 9), not the surface normal alone.
 | E0 | Does the code reproduce problems with known answers? | Image lattice (counts, lengths, energies), lossless box, fully diffuse box vs Kuttruff, uniform box vs Eyring, specular box vs exact lattice, energy vs ray count, scattering-rain solid angle, synthetic decays | Table 2, Fig. 5 | `verification.py` (new; reuses the pytest cases) | ~5 min |
 | E1 | How close are the documented inputs to the measurements? | Classroom, lecture hall, hall before; base inputs, 10 seeds; Sabine/Eyring; scattering range as a band | Table 3, Fig. 6, receiver tables (S4) | `validation_rooms.py` (rewrite) | ~20 min |
 | E2 | How many rays are needed, and does T30 drift with N? | Three rooms, 1–100 rays/m³ (lecture hall up to 300), 10 seeds each | Convergence figure, Table S16 | `ray_count.py` (extend to all rooms) | ~30 min |
-| E3 | Which inputs dominate the uncertainty (error budget)? | One-at-a-time perturbation of each material (±0.05 absolute or ±25 %, whichever is larger), scattering range, air range, volume; 5 seeds; combined by root sum of squares | New figure (tornado per room and band), prediction band in Fig. 6 | `input_sensitivity.py` (new); later checked against ∂T/∂α from PR 11b | ~1–2 h |
+| E3 | Which inputs dominate the uncertainty (error budget)? | One-at-a-time perturbation of each material (±0.05 absolute or ±25 %, whichever is larger), scattering range, air range, volume; 5 seeds; downward and upward changes combined separately by root sum of squares (a two-sided band) | New figure (tornado per room and band), prediction band in Fig. 6 | `input_sensitivity.py` (new); later checked against ∂T/∂α from PR 11b | ~1–2 h |
 | E4 | How far do plausible missing inputs move the result? | Lecture hall S1/S2; hall with seats and low-frequency glazing absorption; s = 0.05–0.40 | Seating results (Table S22), Discussion | `scenarios.py` (new) | ~30 min |
 | E5 | Can the model support the renovation? | Surface statistics before/after (done); calibration options for seats and glazing with an identifiability check (rank of the sensitivity matrix); blind prediction after renovation against both measured data sets | Fig. 8, Fig. 9, Table 4 | `surface_statistics.py` (exists), `renovation.py` (new) | ~30 min |
-| E6 | Which checks reveal which faults? | Faults F1, F2, F3, F6, F9, F16, F17 as switches in `gasim`; known-answer tests and the classroom and lecture hall; 20 seeds per mutant; criteria fixed before the runs | Table 5, Fig. 10, Tables S17–S21 | `fault_reinsertion.py` (new, with Elsa's framework) | dev 1–2 days, run ~1 h |
+| E6 | Which checks reveal which faults? | Faults F1, F2, F3, F6, F9, F16, F17 as switches in `gasim` (`gasim.faults`); known-answer checks V1–V8 and the classroom and lecture hall; 20 seeds per mutant, paired with the baseline; criteria fixed on 2026-10-25, before the runs (stated in the script) | Table 5, Fig. 10, Tables S17–S21 | `fault_reinsertion.py` | ~1 h |
 | E7 | (Supplement) Absorption and scattering sweeps in the test room | Sweeps of Table A4 with 10 seeds; CATT and thesis values shown, not used as reference | Tables S6–S8 | `wall_sweep.py` (exists) | ~5 min |
 
 \* On a 10-core laptop; one run takes about 1 s (classroom), a few seconds (lecture hall) and 0.5–1 min (hall).
@@ -76,13 +79,30 @@ thesis Fig. 9), not the surface normal alone.
 Each batch is one pull request: scripts and tests first, reviewed; the full runs only after the review. Results are
 not committed (they go to `output/`), but every figure and table can be regenerated from the scripts.
 
-## 6. Open decisions
+## 6. Decisions
+
+Settled (2026-11-15):
+
+1. **Classroom model:** the layers of `Real_ClassRoom.3dm` in this repository are right (front wall timber slat
+   panelling with the blackboard, rear wall plaster; photo of 2023-04-10). Desks and chairs were removed for the
+   measurement.
+2. **Lecture hall:** `Absorption_Plane` (two full-height side walls) is glass-fibre panel, as in the base config.
+3. **Scattering:** not documented and not fixed by tuning. Classroom: Table A1. Halls: base 0.10 with the ranges
+   of §3; the range is reported as the largest source of uncertainty. A separate hall run with s = 0.01 serves
+   the cross-check with the patched thesis code only.
+4. **E3 band:** two-sided (downward and upward changes combined separately); perturbation sizes as run.
+5. **Boundary model:** `gasim` uses αd directly. The difference between the impedance fit of the thesis and αd
+   enters the budget of E3 as one term, quoted from the runs of the patched thesis code.
+
+Open:
 
 1. **Code base:** the paper describes and releases `gasim` (to agree with Elsa).
-2. **Lecture hall:** is `Absorption_Plane` (two full-height side walls) glass-fibre panel? Where does the audience
-   seating lie (area for S1/S2)?
-3. **Scattering:** base 0.10 and the ranges of §3 for the halls; keep Table A1 for the classroom?
-4. **Perturbation sizes for E3:** ±0.05 absolute or ±25 % relative per material; ranges for scattering and air.
+2. **Lecture hall seating:** where does the audience seating lie (area for S1/S2)?
+3. **Classroom, 125 Hz:** a scenario with a literature value for the timber slat panelling, if a documented value
+   is found.
+4. **E6 criteria with 20 seeds:** the criteria of 2026-10-25 were written for single paired runs with σ from three
+   baseline seeds. The script applies them to the mean over seeds with σ the standard deviation of one run (to
+   confirm with Elsa; the standard error of the mean would make more small effects count).
 5. **Treated area of the renovation:** walls A, C (except LED) and D by material and position (459 m² of panels), or
    by layer as in the thesis (all panels, 483 m²)?
 6. **Measured data:** which after-renovation values the paper uses until their source is traced; whether to convert

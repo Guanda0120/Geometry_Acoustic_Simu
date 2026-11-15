@@ -6,6 +6,8 @@ front of the mirror plane (Borish 1984). A path is valid for a receiver if, trac
 receiver, every reflection point lies inside its polygon and no segment is blocked by another wall.
 Its energy is prod (1 - alpha_i)(1 - s_i) exp(-m d) / (4 pi d2): the specular share only, because the
 rays carry every path that scatters at least once (docs/rewrite-plan.md, Sect. 4.4).
+
+The faults F6 and F16 of the thesis code can be switched back on for the fault reinsertion (gasim.faults).
 """
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -14,6 +16,7 @@ import numba
 import numpy as np
 from numba import njit
 
+from gasim import faults
 from gasim.geometry.kernels import in_triangles, kernel_arrays, segment_blocked
 from gasim.geometry.room import Room
 
@@ -173,7 +176,10 @@ def find_image_sources(room: Room, max_order: int, air_attenuation):
     columns = {name: [f[i] for f in found] for i, name in enumerate(('receiver', 'order', 'planes', 'points'))}
     receiver, order = np.concatenate(columns['receiver']), np.concatenate(columns['order'])
     planes, points = np.concatenate(columns['planes']), np.concatenate(columns['points'])
-    length = np.array([np.linalg.norm(np.diff(p[:o + 2], axis=0), axis=1).sum() for p, o in zip(points, order)])
+    if faults.on('F16'):
+        length = np.array([faults.thesis_path_length(p, o) for p, o in zip(points, order)])
+    else:
+        length = np.array([np.linalg.norm(np.diff(p[:o + 2], axis=0), axis=1).sum() for p, o in zip(points, order)])
 
     # Specular share of every reflection, per band
     materials = room.materials
@@ -181,7 +187,8 @@ def find_image_sources(room: Room, max_order: int, air_attenuation):
     for column in range(max_order):
         reflected = planes[:, column] >= 0
         material = room.poly_material[planes[reflected, column]]
-        keep[reflected] *= (1 - materials.absorption[material]) * (1 - materials.scattering[material])
+        specular = 1.0 if faults.on('F6') else 1 - materials.scattering[material]
+        keep[reflected] *= (1 - materials.absorption[material]) * specular
     energy = keep * np.exp(-np.outer(length, air_attenuation)) / (4 * np.pi * length[:, None] ** 2)
     return ImageSourcePaths(receiver.astype(np.int64), order, planes, points, length, energy)
 

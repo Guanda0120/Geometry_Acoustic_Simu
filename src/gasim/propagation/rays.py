@@ -9,6 +9,9 @@ energy the diffuse share sends straight to each visible receiver (Vorlaender 202
 2011, Eq. 5.20); sphere detection is therefore skipped on a segment that starts with a diffuse
 reflection, so that every path is counted once in expectation.
 
+The faults F1, F2 and F17 of the thesis code can be switched back on for the fault reinsertion
+(gasim.faults); without a switch the tracer is unchanged.
+
 Per surface (gasim.surfaces) the tracer also counts the ray hits and sums the energy that arrives
 at and is absorbed by the surface, and the energy each receiver gets with the surface as the last
 reflection (diffuse rain and sphere crossings).
@@ -23,6 +26,7 @@ from dataclasses import dataclass
 import numpy as np
 from numba import njit, prange
 
+from gasim import faults
 from gasim.config import SimulationSettings
 from gasim.geometry.kernels import first_hit, kernel_arrays
 from gasim.geometry.room import Room
@@ -31,6 +35,7 @@ ENERGY_THRESHOLD = 1e-7  # tracing stops when a ray (air absorption included) is
 # Rays are split into this many chunks, each with its own histogram, traced in parallel and summed in a
 # fixed order: results do not depend on the number of threads. Memory: CHUNKS x R x B x K x 8 bytes.
 CHUNKS = 32
+PEAK_ORDERS = 5000  # reflection orders for which the strongest ray level is recorded (fault F17)
 
 # splitmix64: a small counter-based generator, so every ray has its own reproducible stream
 _GOLDEN = np.uint64(0x9E3779B97F4A7C15)
@@ -80,6 +85,17 @@ def _lambert(nx, ny, nz, u1, u2):
 
 
 @njit(cache=True)
+def _rain_fraction(cos_theta, radius, distance, thesis_cone):
+    """
+    rain_fraction for the kernels; thesis_cone switches fault F2 on (cos(gamma) = radius / distance)
+    """
+    if thesis_cone:
+        cos_gamma = radius / distance
+    else:
+        cos_gamma = math.sqrt(1.0 - (radius / distance) ** 2)
+    return 2.0 * cos_theta * (1.0 - cos_gamma)
+
+
 def rain_fraction(cos_theta, radius, distance):
     """
     Share of the energy scattered by a Lambert surface element that reaches a sphere (Schroeder 2011, Eq. 5.20)
@@ -88,8 +104,7 @@ def rain_fraction(cos_theta, radius, distance):
     :param distance: Distance from the surface element to the sphere centre, m (> radius)
     :return: 2 cos(theta) (1 - cos(gamma)), sin(gamma) = radius / distance
     """
-    cos_gamma = math.sqrt(1.0 - (radius / distance) ** 2)
-    return 2.0 * cos_theta * (1.0 - cos_gamma)
+    return _rain_fraction(cos_theta, radius, distance, faults.on('F2'))
 
 
 @njit(cache=True)
@@ -109,17 +124,24 @@ def _deposit(histogram, received, receiver, k, energy, factor, path, attenuation
 @njit(cache=True)
 def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_polygon,
                  poly_normal, poly_material, poly_surface, absorption, diffuse_probability, attenuation, speed,
-                 time_step, max_length, exclude_order, histogram, absorbed, remaining, escaped, counters,
-                 surface_hits, surface_incident, surface_absorbed, surface_received):
+                 time_step, max_length, exclude_order, thesis_energy, thesis_cone, max_reflections, histogram,
+                 absorbed, remaining, escaped, counters, surface_hits, surface_incident, surface_absorbed,
+                 surface_received, order_peak):
     """
     Trace rays first .. last - 1 of one group of bands that share their scattering coefficients
     :param diffuse_probability: (M,) scattering coefficient of each material in this group of bands
+    :param thesis_energy: Fault F1: a ray hit or a rain contribution counts N / (4 pi L2) per unit ray energy,
+                          L the path length, instead of 1 / (pi r2)
+    :param thesis_cone: Fault F2, see _rain_fraction
+    :param max_reflections: Every ray stops after this many reflections (fault F17); -1: no limit
     :param histogram: (R, B, K) output, added to
     :param absorbed, remaining, escaped: (B,) energy outputs, added to
     :param counters: (2,) output: escaped rays, wall hits
     :param surface_hits: (S,) output, ray hits per surface
     :param surface_incident, surface_absorbed: (B, S) output, energy arriving at / absorbed by each surface
     :param surface_received: (R, B, S) output, energy deposited at the receivers via each last surface
+    :param order_peak: (K,) output, largest level E N exp(-m L) / (4 pi L2) of any ray after reflection k + 1
+                       (the level of fault F17); K = 0 records nothing
     """
     n_receivers, n_bands, n_bins = histogram.shape
     escaped_rays = 0
@@ -161,7 +183,8 @@ def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v
                     if wx * wx + wy * wy + wz * wz - along * along > radius * radius:
                         continue
                     path = length + along
-                    _deposit(histogram, surface_received, r, int(path / bin_length), energy, inv_area, path,
+                    factor = n_rays / (4.0 * math.pi * path * path) if thesis_energy else inv_area
+                    _deposit(histogram, surface_received, r, int(path / bin_length), energy, factor, path,
                              attenuation, last_surface)
 
             length += t_hit
@@ -196,7 +219,8 @@ def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v
                 path = length + distance
                 k = int(path / bin_length)
                 if k < n_bins:
-                    geometric = rain_fraction(cos_theta, radius, distance) * inv_area
+                    factor = n_rays / (4.0 * math.pi * path * path) if thesis_energy else inv_area
+                    geometric = _rain_fraction(cos_theta, radius, distance, thesis_cone) * factor
                     for b in range(n_bands):
                         value = (energy[b] * (1.0 - absorption[m, b]) * diffuse_probability[m] * geometric
                                  * math.exp(-attenuation[b] * path))
@@ -223,7 +247,9 @@ def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v
             peak = 0.0
             for b in range(n_bands):
                 peak = max(peak, energy[b] * math.exp(-attenuation[b] * length))
-            if peak * n_rays < ENERGY_THRESHOLD:
+            if order <= order_peak.shape[0]:
+                order_peak[order - 1] = max(order_peak[order - 1], peak * n_rays / (4.0 * math.pi * length * length))
+            if peak * n_rays < ENERGY_THRESHOLD or order == max_reflections:
                 remaining += energy
                 break
 
@@ -234,11 +260,12 @@ def _trace_range(first, last, n_rays, seed, stream, source, receivers, radius, v
 @njit(cache=True, parallel=True)
 def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_polygon, poly_normal, poly_material,
            poly_surface, n_surfaces, absorption, diffuse_probability, attenuation, speed, time_step, n_bins,
-           max_length, exclude_order):
+           max_length, exclude_order, thesis_energy, thesis_cone, max_reflections, n_orders):
     """
     Trace all rays of one group of bands in CHUNKS parallel chunks
     :return: Per-chunk histograms (C, R, B, K), energies (C, 3, B), counters (C, 2), surface hits (C, S),
-             surface incident and absorbed energies (C, 2, B, S) and received energies (C, R, B, S)
+             surface incident and absorbed energies (C, 2, B, S), received energies (C, R, B, S) and
+             strongest ray levels per reflection order (C, n_orders)
     """
     n_receivers, n_bands = receivers.shape[0], absorption.shape[1]
     histograms = np.zeros((CHUNKS, n_receivers, n_bands, n_bins))
@@ -247,13 +274,15 @@ def _trace(n_rays, seed, stream, source, receivers, radius, v0, e1, e2, tri_poly
     hits = np.zeros((CHUNKS, n_surfaces), np.int64)
     surface_energies = np.zeros((CHUNKS, 2, n_bands, n_surfaces))
     received = np.zeros((CHUNKS, n_receivers, n_bands, n_surfaces))
+    peaks = np.zeros((CHUNKS, n_orders))
     for chunk in prange(CHUNKS):
         _trace_range(chunk * n_rays // CHUNKS, (chunk + 1) * n_rays // CHUNKS, n_rays, seed, stream, source,
                      receivers, radius, v0, e1, e2, tri_polygon, poly_normal, poly_material, poly_surface, absorption,
-                     diffuse_probability, attenuation, speed, time_step, max_length, exclude_order,
-                     histograms[chunk], energies[chunk, 0], energies[chunk, 1], energies[chunk, 2], counters[chunk],
-                     hits[chunk], surface_energies[chunk, 0], surface_energies[chunk, 1], received[chunk])
-    return histograms, energies, counters, hits, surface_energies, received
+                     diffuse_probability, attenuation, speed, time_step, max_length, exclude_order, thesis_energy,
+                     thesis_cone, max_reflections, histograms[chunk], energies[chunk, 0], energies[chunk, 1],
+                     energies[chunk, 2], counters[chunk], hits[chunk], surface_energies[chunk, 0],
+                     surface_energies[chunk, 1], received[chunk], peaks[chunk])
+    return histograms, energies, counters, hits, surface_energies, received, peaks
 
 
 @dataclass(frozen=True)
@@ -273,6 +302,7 @@ class RayTracing:
     surface_absorbed: np.ndarray  # (B, S) energy absorbed by each surface (air absorption included)
     surface_received: np.ndarray  # (R, B, S) energy at the receivers (histogram summed over time), 1/m2,
     # by the surface of the last reflection; the direct sound is not included
+    stop_order: int = -1  # reflections after which every ray was stopped (fault F17 only), -1: no limit
 
 
 def scattering_groups(scattering: np.ndarray):
@@ -310,16 +340,28 @@ def trace_rays(room: Room, settings: SimulationSettings, speed_of_sound: float, 
     surface_received = np.zeros((n_receivers, n_bands, n_surfaces))
     escaped_rays = reflections = 0
     groups = scattering_groups(scattering)
-    for stream, bands in enumerate(groups):
-        result = _trace(
+    thesis_energy, thesis_cone = faults.on('F1'), faults.on('F2')
+
+    def trace(stream, bands, max_reflections, n_orders):
+        return _trace(
             settings.rays, settings.seed, stream, room.source.astype(float), room.receivers.astype(float),
             float(settings.receiver_radius), v0, e1, e2, room.tri_polygon.astype(np.int64),
             np.ascontiguousarray(room.poly_normal), room.poly_material.astype(np.int64),
             room.poly_surface.astype(np.int64), n_surfaces,
             np.ascontiguousarray(absorption[:, bands]), np.ascontiguousarray(scattering[:, bands[0]]),
             np.ascontiguousarray(attenuation[bands]), float(speed_of_sound), float(settings.time_step), n_bins,
-            float(settings.max_time * speed_of_sound), int(exclude_specular_order))
-        histograms, energies, counters, hits, surface_energies, received = result
+            float(settings.max_time * speed_of_sound), int(exclude_specular_order), thesis_energy, thesis_cone,
+            max_reflections, n_orders)
+
+    stop_order = -1
+    if faults.on('F17'):
+        # The thesis code advanced all rays together and stopped them at one reflection order, set by the
+        # strongest ray: a first pass finds that order, the second pass below stops there
+        peaks = [trace(stream, bands, -1, PEAK_ORDERS)[-1].max(axis=0) for stream, bands in enumerate(groups)]
+        stop_order = faults.thesis_stop_order(np.max(peaks, axis=0))
+
+    for stream, bands in enumerate(groups):
+        histograms, energies, counters, hits, surface_energies, received, _ = trace(stream, bands, stop_order, 0)
         # Sum the chunks in a fixed order, so the result does not depend on the thread count
         histogram[:, bands] = histograms.sum(axis=0)
         absorbed[bands], remaining[bands], escaped[bands] = energies.sum(axis=0)
@@ -329,4 +371,4 @@ def trace_rays(room: Room, settings: SimulationSettings, speed_of_sound: float, 
         surface_incident[bands], surface_absorbed[bands] = surface_energies.sum(axis=0)
         surface_received[:, bands] = received.sum(axis=0)
     return RayTracing(histogram, absorbed, remaining, escaped, escaped_rays, reflections, len(groups),
-                      surface_hits, surface_incident, surface_absorbed, surface_received)
+                      surface_hits, surface_incident, surface_absorbed, surface_received, stop_order)
