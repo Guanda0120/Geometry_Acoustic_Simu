@@ -3,6 +3,7 @@
 #
 #   experiments/run_batch.sh batch1                       # E0 verification, E1 validation, E2 ray count
 #   experiments/run_batch.sh batch2                       # E3 input sensitivity, E4 scenarios
+#   experiments/run_batch.sh batch3                       # E5 renovation
 #   experiments/run_batch.sh batch4                       # E6 fault reinsertion, E7 wall sweeps
 #   experiments/run_batch.sh all                          # every batch
 #   experiments/run_batch.sh verification scenarios       # single scripts by name
@@ -19,14 +20,15 @@ expand() {
     case "$1" in
         batch1) echo "verification validation_rooms ray_count" ;;
         batch2) echo "input_sensitivity scenarios" ;;
+        batch3) echo "renovation" ;;
         batch4) echo "fault_reinsertion wall_sweep" ;;
-        all) echo "verification validation_rooms ray_count input_sensitivity scenarios fault_reinsertion wall_sweep" ;;
+        all) echo "verification validation_rooms ray_count input_sensitivity scenarios renovation fault_reinsertion wall_sweep" ;;
         *) echo "$1" ;;
     esac
 }
 
 if [ $# -eq 0 ]; then
-    sed -n '2,14p' "$0"
+    sed -n '2,15p' "$0"
     exit 2
 fi
 
