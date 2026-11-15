@@ -1,6 +1,7 @@
 """Speed of sound and atmospheric absorption (ISO 9613-1)."""
 import numpy as np
 
+from gasim import faults
 from gasim.bands import OCTAVE_BANDS
 
 REFERENCE_PRESSURE = 101.325  # kPa
@@ -26,6 +27,8 @@ def attenuation_db(frequency, temperature: float = 20.0, humidity: float = 50.0,
     :param pressure: Ambient pressure, kPa
     :return: Attenuation coefficient, dB/m
     """
+    if faults.on('F9'):
+        return faults.thesis_attenuation_db(frequency)
     f = np.asarray(frequency, dtype=float)
     t = temperature + 273.15
     t_rel = t / REFERENCE_TEMPERATURE
