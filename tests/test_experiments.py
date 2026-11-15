@@ -158,3 +158,51 @@ def test_scenarios_runs(tmp_path, monkeypatch):
     assert main(['--cases', 'classroom', '--seeds', '1', '--rays-per-m3', '1', '--output', str(tmp_path)]) == 0
     assert (tmp_path / 'scenarios.csv').exists() and (tmp_path / 'scenarios.png').exists()
     sys.modules.pop('scenarios')
+
+
+def test_anchored_prediction_cancels_absorption_missing_in_both_states(monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from renovation import anchored, calibration_step, missing_area
+    volume, constant = 1000.0, 0.161
+    # Diffuse field: T = constant V / A. The model lacks 50 m2 that the room has before and after
+    model_before, treatment, missing = 100.0, 80.0, 50.0
+    t = lambda area: constant * volume / area
+    prediction = anchored(t(model_before + missing), t(model_before), t(model_before + treatment))
+    np.testing.assert_allclose(prediction, t(model_before + missing + treatment))
+    np.testing.assert_allclose(missing_area(t(model_before + missing), t(model_before), volume, constant), missing)
+    # One calibration step puts the missing area on a 200 m2 layer; the coefficient stays below 1
+    np.testing.assert_allclose(calibration_step([0.02], t(model_before + missing), t(model_before), volume, 200.0,
+                                                constant), [0.27])
+    assert calibration_step([0.9], [0.1], [5.0], volume, 10.0, constant)[0] == 0.99
+    # A simulated change that removes more absorption than the measured room has gives no prediction
+    assert np.isnan(anchored([2.0], [0.5], [5.0])[0])
+    sys.modules.pop('renovation')
+
+
+@pytest.mark.skipif(not Path('models/private/Real_Work.3dm').exists(), reason='needs the private hall model')
+def test_renovation_treats_the_panels_by_layer_or_without_the_glazed_wall(monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from renovation import AFTER, BEFORE, renovated
+
+    from gasim.config import load_config
+    from gasim.geometry import load_room
+    before, after = load_config(BEFORE), load_config(AFTER)
+    room = load_room(before)[0]
+    by_layer, by_wall = renovated(before, after, room, False), renovated(before, after, room, True)
+    np.testing.assert_allclose(by_layer.materials.absorption, after.materials.absorption)
+    names = before.materials.names
+    area = room.area_by_material()
+    for layer, kept in (('Wood', 14.5), ('Woolen', 9.2)):  # m2 of panels on the glazed wall
+        m = names.index(layer)
+        expected = after.materials.absorption[m] + kept / area[layer] * (before.materials.absorption[m]
+                                                                         - after.materials.absorption[m])
+        np.testing.assert_allclose(by_wall.materials.absorption[m], expected, rtol=5e-3)
+    ceiling = names.index('White')
+    np.testing.assert_allclose(by_wall.materials.absorption[ceiling], after.materials.absorption[ceiling])
+    # A calibrated floor survives the renovation
+    from _common import material_spec, with_materials
+    spec = material_spec(before)
+    calibrated = with_materials(before, {**spec, 'Floor': {**spec['Floor'], 'absorption': 0.3}})
+    floor = names.index('Floor')
+    np.testing.assert_allclose(renovated(calibrated, after, room, False).materials.absorption[floor], 0.3)
+    sys.modules.pop('renovation')

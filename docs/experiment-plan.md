@@ -61,7 +61,7 @@ thesis Fig. 9), not the surface normal alone.
 | E2 | How many rays are needed, and does T30 drift with N? | Three rooms, 1–100 rays/m³ (lecture hall up to 300), 10 seeds each | Convergence figure, Table S16 | `ray_count.py` (extend to all rooms) | ~30 min |
 | E3 | Which inputs dominate the uncertainty (error budget)? | One-at-a-time perturbation of each material (±0.05 absolute or ±25 %, whichever is larger), scattering range, air range, volume; 5 seeds; downward and upward changes combined separately by root sum of squares (a two-sided band) | New figure (tornado per room and band), prediction band in Fig. 6 | `input_sensitivity.py` (new); later checked against ∂T/∂α from PR 11b | ~1–2 h |
 | E4 | How far do plausible missing inputs move the result? | Lecture hall S1/S2; hall with seats and low-frequency glazing absorption; s = 0.05–0.40 | Seating results (Table S22), Discussion | `scenarios.py` (new) | ~30 min |
-| E5 | Can the model support the renovation? | Surface statistics before/after (done); calibration options for seats and glazing with an identifiability check (rank of the sensitivity matrix); blind prediction after renovation against both measured data sets | Fig. 8, Fig. 9, Table 4 | `surface_statistics.py` (exists), `renovation.py` (new) | ~30 min |
+| E5 | Can the model support the renovation? | Surface statistics before/after (done). The renovation as a hold-out test: three predictions fixed in advance that use the measurement before the renovation at most (documented inputs; simulated change anchored to the measured level; one lumped absorption area per band calibrated on the floor, since one measured value per band identifies one unknown), each for the treated area by layer and as the paper lists it, against both measured data sets | Fig. 8, Fig. 9, Table 4 | `surface_statistics.py` (exists), `renovation.py` (new) | ~30 min |
 | E6 | Which checks reveal which faults? | Faults F1, F2, F3, F6, F9, F16, F17 as switches in `gasim` (`gasim.faults`); known-answer checks V1–V8 and the classroom and lecture hall; 20 seeds per mutant, paired with the baseline; criteria fixed on 2026-10-25, before the runs (stated in the script) | Table 5, Fig. 10, Tables S17–S21 | `fault_reinsertion.py` | ~1 h |
 | E7 | (Supplement) Absorption and scattering sweeps in the test room | Sweeps of Table A4 with 10 seeds; CATT and thesis values shown, not used as reference | Tables S6–S8 | `wall_sweep.py` (exists) | ~5 min |
 
@@ -103,10 +103,10 @@ Open:
 4. **E6 criteria with 20 seeds:** the criteria of 2026-10-25 were written for single paired runs with σ from three
    baseline seeds. The script applies them to the mean over seeds with σ the standard deviation of one run (to
    confirm with Elsa; the standard error of the mean would make more small effects count).
-5. **Treated area of the renovation:** walls A, C (except LED) and D by material and position (459 m² of panels), or
-   by layer as in the thesis (all panels, 483 m²)?
-6. **Measured data:** which after-renovation values the paper uses until their source is traced; whether to convert
-   the 1/3-octave values of the hall to octave bands.
+5. **Treated area of the renovation:** E5 runs both (by layer as in the thesis, 483 m² of panels; walls A, C and D
+   as in the paper, 459 m²); which one the paper states is open.
+6. **Measured data:** E5 reports against both after-renovation data sets until the source of the paper's values is
+   traced; whether to convert the 1/3-octave values of the hall to octave bands.
 7. **Seeds and ray density:** 10 seeds at 100 rays/m³ as the base, unless E2 shows otherwise.
 8. **Original code in E0:** run the legacy engine on the known-answer tests for the "original code" column (slow, small
    ray counts), or quote the values from Elsa's runs.
