@@ -11,10 +11,11 @@ paired and largely free of Monte Carlo noise:
 - the scattering coefficient, uniform at both ends of SCATTERING_RANGE;
 - the air, at the four corners of AIR_RANGE (temperature, humidity); the extremes count as one factor.
 
-For every factor and band the larger of the two changes of T30 (median over receivers, mean over seeds) is
-its uncertainty; the uncertainties of the materials, of the scattering and of the air are combined as a
-root sum of squares into a prediction band, which is compared with the measured mean and its 95 %
-confidence interval. Volume is not perturbed: the models agree with the drawings within 3 %, and RT scales
+For every factor and band the changes of T30 (median over receivers, mean over seeds) that shorten it and
+those that lengthen it are kept apart: a factor whose base value lies at one end of its range moves T30 in
+one direction only. The downward changes of the materials, of the scattering and of the air are combined
+as a root sum of squares, and so are the upward changes; this gives a prediction band with two sides,
+which is compared with the measured mean and its 95 % confidence interval. Volume is not perturbed: the models agree with the drawings within 3 %, and RT scales
 linearly with the size of a room (about 1 % for a 3 % volume error).
 
 Writes factors.csv, budget.csv, input_sensitivity.png and run_info.json to --output.
@@ -98,12 +99,20 @@ def run_case(case: str, seeds: int, rays_per_m3: float):
 
 def budget(changes):
     """
-    :return: {group: (B,) uncertainty in %} for the materials, the scattering, the air and their total
+    :param changes: {factor: (change at the low end, change at the high end) of T30 in %, arrays (B,)}
+    :return: {group: (down, up)}, (B,) one-sided uncertainties in % (both positive), for the materials, the
+             scattering, the air and their total
     """
-    largest = {name: np.maximum(np.abs(low), np.abs(high)) for name, (low, high) in changes.items()}
-    materials = np.sqrt(sum(value ** 2 for name, value in largest.items() if name.startswith('alpha ')))
-    total = np.sqrt(materials ** 2 + largest['scattering'] ** 2 + largest['air'] ** 2)
-    return {'materials': materials, 'scattering': largest['scattering'], 'air': largest['air'], 'total': total}
+    sides = {name: (np.maximum(0.0, -np.minimum(low, high)), np.maximum(0.0, np.maximum(low, high)))
+             for name, (low, high) in changes.items()}
+    groups = {}
+    for side in (0, 1):
+        materials = np.sqrt(sum(value[side] ** 2 for name, value in sides.items() if name.startswith('alpha ')))
+        total = np.sqrt(materials ** 2 + sides['scattering'][side] ** 2 + sides['air'][side] ** 2)
+        for group, value in (('materials', materials), ('scattering', sides['scattering'][side]),
+                             ('air', sides['air'][side]), ('total', total)):
+            groups.setdefault(group, []).append(value)
+    return {group: tuple(values) for group, values in groups.items()}
 
 
 def main(argv=None):
@@ -134,12 +143,14 @@ def main(argv=None):
                                     'change_high_pct': high[b]})
         for b, band in enumerate(OCTAVE_BANDS):
             row = {'case': case, 'band': int(band), 't30_base': base[b],
-                   **{f'u_{group}_pct': values[b] for group, values in groups.items()}}
+                   **{f'u_{group}_{side}_pct': values[i][b] for group, values in groups.items()
+                      for i, side in enumerate(('down', 'up'))}}
             if measured is not None:
-                error = 100 * (base[b] / measured[b] - 1)
-                allowed = groups['total'][b] + 100 * ci[b] / measured[b]
-                row.update({'measured': measured[b], 'measured_ci95': ci[b], 'error_pct': error,
-                            'within_band': bool(abs(error) <= allowed)})
+                down, up = groups['total']
+                lower, upper = base[b] * (1 - down[b] / 100), base[b] * (1 + up[b] / 100)
+                row.update({'measured': measured[b], 'measured_ci95': ci[b],
+                            'error_pct': 100 * (base[b] / measured[b] - 1), 'band_low': lower, 'band_high': upper,
+                            'within_band': bool(lower - ci[b] <= measured[b] <= upper + ci[b])})
             budget_rows.append(row)
 
     write_csv(output / 'factors.csv', factor_rows)
@@ -148,13 +159,14 @@ def main(argv=None):
     write_run_info(output, started, cases={c: PAPER_ROOMS[c][1] for c in args.cases}, seeds=args.seeds,
                    rays_per_m3=args.rays_per_m3, delta=(DELTA_ABSOLUTE, DELTA_RELATIVE), air_range=AIR_RANGE,
                    scattering_range={c: SCATTERING_RANGE[c] for c in args.cases})
-    print(f"\n{'case':<13}{'band':>6}{'T30':>7}{'meas':>7}{'err %':>8}{'U mat':>7}{'U scat':>8}{'U air':>7}"
-          f"{'U tot':>7}  within")
+    print(f"\n{'case':<13}{'band':>6}{'T30':>7}{'meas':>7}{'err %':>8}{'mat -/+':>12}{'scat -/+':>12}{'air -/+':>12}"
+          f"{'total -/+':>12}  within")
     for row in budget_rows:
         print(f"{row['case']:<13}{row['band']:>6}{cell(row, 't30_base', 7)}{cell(row, 'measured', 7)}"
-              f"{cell(row, 'error_pct', 8, '+.1f')}{cell(row, 'u_materials_pct', 7, '.1f')}"
-              f"{cell(row, 'u_scattering_pct', 8, '.1f')}{cell(row, 'u_air_pct', 7, '.1f')}"
-              f"{cell(row, 'u_total_pct', 7, '.1f')}  {row.get('within_band', '-')}")
+              f"{cell(row, 'error_pct', 8, '+.1f')}"
+              + ''.join(f"{cell(row, f'u_{group}_down_pct', 7, '.0f')}/{cell(row, f'u_{group}_up_pct', 4, '.0f')}"
+                        for group in ('materials', 'scattering', 'air', 'total'))
+              + f"  {row.get('within_band', '-')}")
     print(f"\nWrote {output}")
     return 0
 
@@ -167,8 +179,9 @@ def plot(results, path: Path):
     for column, (title, base, changes, groups, measured, ci) in enumerate(results.values()):
         ax = axes[0][column]
         for group, alpha in (('total', 0.15), ('materials', 0.3)):
-            ax.fill_between(x, base * (1 - groups[group] / 100), base * (1 + groups[group] / 100), color=COLOURS['new'],
-                            alpha=alpha, lw=0, label=f'± {group} uncertainty')
+            down, up = groups[group]
+            ax.fill_between(x, base * (1 - down / 100), base * (1 + up / 100), color=COLOURS['new'],
+                            alpha=alpha, lw=0, label=f'{group} uncertainty (−/+)')
         ax.plot(x, base, '^-', color=COLOURS['new'], label='gasim T30, documented inputs')
         if measured is not None:
             ax.errorbar(x, measured, yerr=ci, fmt='o-', color=COLOURS['measured'], capsize=3, label='Measured (95% CI)')
