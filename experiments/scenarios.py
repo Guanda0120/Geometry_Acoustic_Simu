@@ -4,7 +4,8 @@ E4, scenarios for inputs that were not documented (seating results and Discussio
     uv run python experiments/scenarios.py [--seeds 5] [--rays-per-m3 100] [--cases mf_hall ...]
 
 Each scenario changes the documented inputs of one room (configs/<room>_paper.toml) by an assumption that
-is stated in SCENARIOS, with literature values from LITERATURE. Seats are merged into the floor layer by
+is stated in SCENARIOS, with literature values from LITERATURE. A change to part of a layer (the polygons
+in one plane) is merged into the layer in the same way as the seats. Seats are merged into the floor layer by
 area weighting (equal absorption area, no seat geometry): on a layer of area S with absorption alpha, a
 seating area A with absorption alpha_seat gives alpha + (A / S)(alpha_seat - alpha). All runs of a room use
 the same seeds, so the differences between scenarios are paired. The results show how far each plausible
@@ -51,6 +52,9 @@ LITERATURE = {
     # Vorlaender, Auralization (2020), Annex p. 336, seating, per m2 of seating at two seats per m2
     'wooden_chairs': ([0.05, 0.08, 0.10, 0.12, 0.12, 0.12], 'Vorlaender 2020, Annex p. 336: wooden chairs without cushion'),
     'cloth_chairs': ([0.44, 0.60, 0.77, 0.89, 0.82, 0.70], 'Vorlaender 2020, Annex p. 336: empty chairs, upholstered with cloth cover'),
+    # Vorlaender, Auralization (2020), Annex pp. 334-335, wood linings
+    'wooden_lining': ([0.27, 0.23, 0.22, 0.15, 0.10, 0.07], 'Vorlaender 2020, Annex p. 334: wooden lining, 12 mm fixed on frame'),
+    'thin_plywood': ([0.42, 0.21, 0.10, 0.08, 0.06, 0.06], 'Vorlaender 2020, Annex p. 335: thin plywood panelling'),
     # Thesis Table 4.5 / paper Table A2 (source not documented)
     'thesis_seats': ([0.07, 0.14, 0.21, 0.24, 0.19, 0.27], 'thesis Table 4.5: audience seating'),
     # Paper Table A2
@@ -65,14 +69,19 @@ SEATING = {
 }
 
 # Scenario: list of changes (kind, argument); kinds: seats (literature key), material (layer, literature key),
-# scattering (uniform value)
+# part (layer, literature key, axis, coordinate: the polygons of the layer that lie in that plane), scattering
+# (uniform value)
+# Classroom: desks and chairs were removed for the measurement, so there is no seating scenario. The front wall
+# (x = 0) is timber slat panelling around the blackboard (photo of 2023-04-10); Table A1 gives the whole Wood
+# layer the coefficients of 16 mm wood on studs. Its construction is not documented, so two linings from the
+# literature are tried on it; the doors keep Table A1.
+CLASSROOM_FRONT_WALL = ('x', 0.0)
 SCENARIOS = {
     'classroom': {
-        'wooden chairs': [('seats', 'wooden_chairs')],
+        'front wall: wooden lining on frame': [('part', ('Wood', 'wooden_lining', *CLASSROOM_FRONT_WALL))],
+        'front wall: thin plywood panelling': [('part', ('Wood', 'thin_plywood', *CLASSROOM_FRONT_WALL))],
         'glazing, low-frequency': [('material', ('Glass', 'double_glazing_wide_gap'))],
         's = 0.2': [('scattering', 0.2)],
-        'chairs + glazing + s = 0.2': [('seats', 'wooden_chairs'), ('material', ('Glass', 'double_glazing_wide_gap')),
-                                       ('scattering', 0.2)],
     },
     'lecture_hall': {
         'S1: thesis seat coefficient': [('seats', 'thesis_seats')],
@@ -92,12 +101,22 @@ SCENARIOS = {
 FLOOR_LAYER = 'Floor'
 
 
+def part_area(room, layer: str, axis: str, coordinate: float, tolerance: float = 1e-3):
+    """
+    :return: Area of the polygons of a layer whose vertices all lie in the plane axis = coordinate, m2
+    """
+    column = 'xyz'.index(axis)
+    return float(sum(area for area, name, vertices in zip(room.poly_area, room.poly_layer, room.poly_vertices)
+                     if name == layer and np.all(np.abs(np.asarray(vertices)[:, column] - coordinate) < tolerance)))
+
+
 def apply(config, case: str, changes):
     """
     :return: Config of one scenario
     """
     spec = material_spec(config)
-    floor_area = load_room(config)[0].area_by_material()[FLOOR_LAYER]
+    room = load_room(config)[0]
+    floor_area = room.area_by_material()[FLOOR_LAYER]
     scattering = None
     for kind, argument in changes:
         if kind == 'seats':
@@ -105,6 +124,13 @@ def apply(config, case: str, changes):
             floor = np.asarray(spec[FLOOR_LAYER]['absorption'])
             share = SEATING[case] / floor_area
             spec[FLOOR_LAYER] = {**spec[FLOOR_LAYER], 'absorption': (floor + share * (seat - floor)).tolist()}
+        elif kind == 'part':
+            layer, key, axis, coordinate = argument
+            share = part_area(room, layer, axis, coordinate) / room.area_by_material()[layer]
+            if not 0 < share <= 1:
+                raise ValueError(f"no polygons of layer {layer} in the plane {axis} = {coordinate}")
+            current = np.asarray(spec[layer]['absorption'])
+            spec[layer] = {**spec[layer], 'absorption': (current + share * (np.asarray(LITERATURE[key][0]) - current)).tolist()}
         elif kind == 'material':
             layer, key = argument
             spec[layer] = {**spec[layer], 'absorption': LITERATURE[key][0]}

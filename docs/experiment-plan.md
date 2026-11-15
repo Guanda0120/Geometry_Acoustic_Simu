@@ -1,7 +1,7 @@
 # Experiment plan: rerunning the paper with the verified engine
 
-Status (2026-11-15): E0–E4 have been run (batch 1 on 2026-11-03, batch 2 on 2026-11-08). The E6 script is
-written and smoke-tested; its full run, E5 and E7 are outstanding. The decisions of §6 are marked as settled or
+Status (2026-11-15): E0–E4, E6 and E7 have been run (batch 1 on 2026-11-03, batch 2 on 2026-11-08, E6 and E7
+on 2026-11-15); E5 is outstanding. The decisions of §6 are marked as settled or
 open; the final numbers of the paper come from one rerun of all experiments at a tagged commit, after the open
 ones are settled.
 
@@ -98,8 +98,8 @@ Open:
 
 1. **Code base:** the paper describes and releases `gasim` (to agree with Elsa).
 2. **Lecture hall seating:** where does the audience seating lie (area for S1/S2)?
-3. **Classroom, 125 Hz:** a scenario with a literature value for the timber slat panelling, if a documented value
-   is found.
+3. **Classroom front wall:** the construction of the timber slat panelling is not documented. E4 tries two
+   linings from Vorländer (2020, Annex pp. 334–335) on its 16.6 m²; neither is adopted as an input.
 4. **E6 criteria with 20 seeds:** the criteria of 2026-10-25 were written for single paired runs with σ from three
    baseline seeds. The script applies them to the mean over seeds with σ the standard deviation of one run (to
    confirm with Elsa; the standard error of the mean would make more small effects count).

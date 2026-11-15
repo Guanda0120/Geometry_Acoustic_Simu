@@ -24,9 +24,10 @@ def test_validation_rooms_runs(tmp_path, monkeypatch):
 def test_wall_sweep_runs(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend('experiments')
     from wall_sweep import main
+    assert main(['--seeds', '1', '--rays', '300', '--values', '0.1', '0.5', '--output', str(tmp_path)]) == 0  # both
     for kind in ('absorption', 'scattering'):
-        assert main([kind, '--seeds', '1', '--rays', '300', '--values', '0.1', '0.5', '--output', str(tmp_path)]) == 0
         assert (tmp_path / f'{kind}_sweep.csv').exists() and (tmp_path / f'{kind}_sweep.png').exists()
+    assert (tmp_path / 'run_info.json').exists()
     sys.modules.pop('wall_sweep')
 
 
@@ -125,6 +126,28 @@ def test_seats_are_merged_into_the_floor_by_area(monkeypatch):
     # The absorption area grows by exactly the seating area times the difference of the coefficients
     np.testing.assert_allclose(area * (merged.materials.absorption[floor] - config.materials.absorption[floor]),
                                SEATING['classroom'] * (seat - config.materials.absorption[floor]))
+    sys.modules.pop('scenarios')
+
+
+@NEEDS_DATA
+def test_part_of_a_layer_is_merged_by_area(monkeypatch):
+    monkeypatch.syspath_prepend('experiments')
+    from scenarios import LITERATURE, apply, part_area
+
+    from gasim.config import load_config
+    from gasim.geometry import load_room
+    config = load_config('configs/classroom_paper.toml')
+    room = load_room(config)[0]
+    wood = config.materials.names.index('Wood')
+    front = part_area(room, 'Wood', 'x', 0.0)
+    assert front == pytest.approx(16.6, abs=0.05)  # the panelling around the blackboard; the doors are elsewhere
+    merged = apply(config, 'classroom', [('part', ('Wood', 'wooden_lining', 'x', 0.0))])
+    lining = np.asarray(LITERATURE['wooden_lining'][0])
+    before = config.materials.absorption[wood]
+    np.testing.assert_allclose(room.area_by_material()['Wood'] * (merged.materials.absorption[wood] - before),
+                               front * (lining - before))
+    with pytest.raises(ValueError, match='no polygons'):
+        apply(config, 'classroom', [('part', ('Wood', 'wooden_lining', 'z', 99.0))])
     sys.modules.pop('scenarios')
 
 

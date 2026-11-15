@@ -1,15 +1,18 @@
 """
-Wall absorption and scattering sweeps in the 9 x 7 x 5 m test room against CATT-Acoustic (paper Figs. 6, 7, Table 3).
+E7, wall absorption and scattering sweeps in the 9 x 7 x 5 m test room (supplement, Tables S6-S8;
+docs/experiment-plan.md).
 
-    uv run python experiments/wall_sweep.py absorption [--seeds 5] [--data ../data]
-    uv run python experiments/wall_sweep.py scattering [--seeds 5] [--data ../data]
+    uv run python experiments/wall_sweep.py [absorption scattering] [--seeds 10] [--data ../data]
 
 Inputs as in the thesis (Tables 4.12 and 4.14): carpet floor, gypsum ceiling, the four walls varied; s = 0.10
 except the walls in the scattering sweep. CATT and thesis-engine values at receiver 1 are read from
-data/catt/<kind>_sweep.csv if present. Writes <kind>_sweep.csv and <kind>_sweep.png to --output.
+data/catt/<kind>_sweep.csv if present; they are shown for comparison and are not a reference (the CATT values
+at 125 Hz are not consistent with the documented inputs). Writes <kind>_sweep.csv, <kind>_sweep.png and
+run_info.json to --output.
 """
 import argparse
 import sys
+import time
 from pathlib import Path
 
 import matplotlib
@@ -36,6 +39,7 @@ from _common import (
     with_materials,
     with_settings,
     write_csv,
+    write_run_info,
 )
 
 
@@ -59,15 +63,28 @@ def sweep_config(kind: str, value: float, rays: int):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('kind', choices=['absorption', 'scattering'])
+    parser.add_argument('kinds', nargs='*', metavar='{absorption,scattering}', help='default: both')
     parser.add_argument('--data', default='../data', help='folder with catt/<kind>_sweep.csv')
-    parser.add_argument('--seeds', type=int, default=5)
+    parser.add_argument('--seeds', type=int, default=10)
     parser.add_argument('--rays', type=int, default=31_500, help='rays per run (31 500 = 100 per m3)')
     parser.add_argument('--values', type=float, nargs='+', default=SWEEP_VALUES, help='wall coefficients')
     parser.add_argument('--output', default='output/experiments/sweeps')
     args = parser.parse_args(argv)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
+    started = time.time()
+    args.kinds = args.kinds or ['absorption', 'scattering']
+    if set(args.kinds) - {'absorption', 'scattering'}:  # argparse cannot combine choices with an empty list
+        parser.error(f"unknown sweep: {' '.join(args.kinds)}")
+    for kind in args.kinds:
+        sweep(kind, args, output)
+    write_run_info(output, started, config='configs/test_room.toml', kinds=args.kinds, seeds=args.seeds,
+                   rays=args.rays, values=args.values)
+    return 0
+
+
+def sweep(kind: str, args, output: Path):
+    args = argparse.Namespace(**{**vars(args), 'kind': kind})
     reference_table = read_sweep_table(Path(args.data) / 'catt' / f'{args.kind}_sweep.csv')
 
     rows, curves = [], {'receiver_1': [], 'receiver_1_std': [], 'room_mean': [], 'eyring': []}
@@ -95,7 +112,6 @@ def main(argv=None):
          output / f'{args.kind}_sweep.png')
     print_summary(args.kind, rows)
     print(f"\nWrote {output / f'{args.kind}_sweep.csv'} and {output / f'{args.kind}_sweep.png'}")
-    return 0
 
 
 def print_summary(kind: str, rows):
